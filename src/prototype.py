@@ -92,9 +92,12 @@ def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
     """
     Detect simple sensitive data patterns.
 
-    This is a basic prototype control.
-    Production systems would require stronger data classification,
-    DLP controls, secure storage, and privacy review.
+    This prototype detects explicit sensitive data values, such as CPF,
+    email addresses, phone numbers, and card-like numbers.
+
+    It does not treat the word "password" alone as sensitive data.
+    A password reset request is sensitive from an operational perspective,
+    but it is not the same as the user exposing an actual secret.
     """
 
     patterns = {
@@ -102,7 +105,7 @@ def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
         "cpf": r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b",
         "phone": r"\b(?:\+55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b",
         "credit_card_like_number": r"\b(?:\d[ -]*?){13,16}\b",
-        "password_keyword": r"\b(password|senha|passcode|secret|token)\b",
+        "exposed_secret": r"\b(my password is|minha senha é|token is|secret is|my token is)\b",
     }
 
     detected_types = []
@@ -117,6 +120,11 @@ def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
 def classify_ticket(subject: str, description: str) -> str:
     """
     Classify a ticket into a simulated ITSM category.
+
+    The order matters:
+    - Security incidents must be identified first.
+    - Access requests must be separated from access support.
+    - Service requests should be identified before generic technical issues.
     """
 
     text = f"{subject} {description}".lower()
@@ -124,17 +132,17 @@ def classify_ticket(subject: str, description: str) -> str:
     if any(keyword in text for keyword in ["phishing", "suspicious", "malware", "security", "breach"]):
         return "Security Incident"
 
-    if any(keyword in text for keyword in ["password", "senha", "login", "access issue", "cannot access"]):
+    if any(keyword in text for keyword in ["grant access", "request access", "permission", "shared folder", "restricted folder"]):
+        return "Access Request"
+
+    if any(keyword in text for keyword in ["password reset", "forgot my password", "senha", "login", "access issue", "cannot access"]):
         return "Access Support"
 
-    if any(keyword in text for keyword in ["grant access", "request access", "permission", "shared folder"]):
-        return "Access Request"
+    if any(keyword in text for keyword in ["invoice", "question", "information", "how to", "request"]):
+        return "Service Request"
 
     if any(keyword in text for keyword in ["slow", "error", "crash", "not working", "issue", "problem"]):
         return "Technical Incident"
-
-    if any(keyword in text for keyword in ["invoice", "question", "information", "how to"]):
-        return "Service Request"
 
     return "General Support"
 
@@ -162,6 +170,9 @@ def assign_priority(
 
     if urgent:
         return "High"
+
+    if category == "Access Request":
+        return "Medium"
 
     if category in ["Technical Incident", "Access Support"]:
         return "Medium"
