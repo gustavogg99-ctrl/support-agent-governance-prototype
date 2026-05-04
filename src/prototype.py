@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -160,7 +161,21 @@ def classify_ticket(subject: str, description: str) -> str:
 
     text = f"{subject} {description}".lower()
 
-    if any(keyword in text for keyword in ["phishing", "suspicious", "malware", "security", "breach"]):
+    security_keywords = [
+        "phishing",
+        "suspicious",
+        "malware",
+        "security",
+        "breach",
+        "exposed password",
+        "my password is",
+        "minha senha é",
+        "credential",
+        "credentials",
+        "compromised",
+    ]
+
+    if any(keyword in text for keyword in security_keywords):
         return "Security Incident"
 
     if any(keyword in text for keyword in ["grant access", "request access", "permission", "shared folder", "restricted folder"]):
@@ -462,18 +477,94 @@ def print_execution_summary(analyses: list[TicketAnalysis]) -> None:
     print("=" * 80)
     print()
 
+def list_sample_tickets(tickets: list[Ticket]) -> None:
+    """
+    List available simulated tickets.
+    """
+
+    print("Available simulated tickets:")
+    print("-" * 80)
+
+    for ticket in tickets:
+        print(f"{ticket.ticket_id} - {ticket.subject}")
+
+    print("-" * 80)
+
+
+def find_ticket_by_id(ticket_id: str, tickets: list[Ticket]) -> Ticket | None:
+    """
+    Find a simulated ticket by ticket ID.
+    """
+
+    normalized_ticket_id = ticket_id.strip().upper()
+
+    for ticket in tickets:
+        if ticket.ticket_id.upper() == normalized_ticket_id:
+            return ticket
+
+    return None
+
+
+def select_tickets_from_arguments(arguments: list[str]) -> list[Ticket] | None:
+    """
+    Select tickets based on simple command-line arguments.
+
+    Supported commands:
+    - No argument: run all simulated tickets
+    - --list: list available tickets
+    - --ticket TCK-001: run one specific ticket
+    """
+
+    if not arguments:
+        return SAMPLE_TICKETS
+
+    command = arguments[0].strip().lower()
+
+    if command in ["--list", "list"]:
+        list_sample_tickets(SAMPLE_TICKETS)
+        return None
+
+    if command in ["--ticket", "ticket"]:
+        if len(arguments) < 2:
+            print("Missing ticket ID.")
+            print("Example: py src/prototype.py --ticket TCK-009")
+            return None
+
+        selected_ticket = find_ticket_by_id(arguments[1], SAMPLE_TICKETS)
+
+        if selected_ticket is None:
+            print(f"Ticket ID '{arguments[1]}' was not found.")
+            print("Use --list to see available simulated tickets.")
+            return None
+
+        return [selected_ticket]
+
+    print(f"Unknown argument: {arguments[0]}")
+    print("Available commands:")
+    print("  py src/prototype.py")
+    print("  py src/prototype.py --list")
+    print("  py src/prototype.py --ticket TCK-009")
+
+    return None
+
 def main() -> None:
     """
     Execute the local prototype using simulated tickets.
     """
 
     print("AI Autonomous Support Agent - Local Prototype")
+
+    tickets_to_process = select_tickets_from_arguments(sys.argv[1:])
+
+    if tickets_to_process is None:
+        return
+
     print("Running simulated ticket analysis...")
     print()
 
     analyses: list[TicketAnalysis] = []
 
-    for ticket in SAMPLE_TICKETS:
+    for ticket in tickets_to_process:
         analysis = analyze_ticket(ticket)
         analyses.append(analysis)
 
