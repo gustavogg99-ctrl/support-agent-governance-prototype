@@ -1,0 +1,1 @@
+print("Agente de suporte iniciado com sucesso")
