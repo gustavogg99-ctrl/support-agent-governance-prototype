@@ -26,6 +26,7 @@ import re
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -108,7 +109,7 @@ def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
         "exposed_secret": r"\b(my password is|minha senha é|token is|secret is|my token is)\b",
     }
 
-    detected_types = []
+    detected_types: list[str] = []
 
     for data_type, pattern in patterns.items():
         if re.search(pattern, text, flags=re.IGNORECASE):
@@ -318,7 +319,7 @@ def write_audit_log(ticket: Ticket, analysis: TicketAnalysis) -> None:
     The log is stored locally and uses redacted ticket text.
     """
 
-    log_entry = {
+    log_entry: dict[str, Any] = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "ticket": {
             "ticket_id": ticket.ticket_id,
@@ -409,6 +410,27 @@ def print_analysis(ticket: Ticket, analysis: TicketAnalysis) -> None:
     print("=" * 80)
     print()
 
+def print_execution_summary(analyses: list[TicketAnalysis]) -> None:
+    """
+    Print an execution summary for the local prototype run.
+    """
+
+    total_tickets = len(analyses)
+    escalated_tickets = sum(1 for analysis in analyses if analysis.human_escalation_required)
+    automation_allowed = sum(1 for analysis in analyses if analysis.automation_allowed)
+    automation_blocked = total_tickets - automation_allowed
+    sensitive_data_cases = sum(1 for analysis in analyses if analysis.sensitive_data_detected)
+
+    print("=" * 80)
+    print("Execution Summary")
+    print("-" * 80)
+    print(f"Total tickets processed: {total_tickets}")
+    print(f"Human escalation required: {escalated_tickets}")
+    print(f"Automation allowed: {automation_allowed}")
+    print(f"Automation blocked: {automation_blocked}")
+    print(f"Sensitive data cases: {sensitive_data_cases}")
+    print("=" * 80)
+    print()
 
 def main() -> None:
     """
@@ -419,10 +441,16 @@ def main() -> None:
     print("Running simulated ticket analysis...")
     print()
 
+    analyses: list[TicketAnalysis] = []
+
     for ticket in SAMPLE_TICKETS:
         analysis = analyze_ticket(ticket)
+        analyses.append(analysis)
+
         write_audit_log(ticket, analysis)
         print_analysis(ticket, analysis)
+
+    print_execution_summary(analyses)
 
     print(f"Audit log created or updated at: {AUDIT_LOG_FILE}")
 
