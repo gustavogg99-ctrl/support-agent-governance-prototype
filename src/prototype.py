@@ -326,9 +326,26 @@ def generate_safe_response(
 def redact_text(text: str) -> str:
     """
     Redact basic sensitive data from audit logs.
+
+    This prototype redacts common sensitive data patterns before writing
+    ticket subject and description fields to the local audit log.
     """
 
     redacted = text
+
+    redacted = re.sub(
+        r"\b(my password is|minha senha é|token is|secret is|my token is)\s*:?\s*\S+",
+        r"\1 [REDACTED_SECRET]",
+        redacted,
+        flags=re.IGNORECASE,
+    )
+
+    redacted = re.sub(
+        r"\b(password|senha|token|secret)\s*[:=]\s*\S+",
+        r"\1=[REDACTED_SECRET]",
+        redacted,
+        flags=re.IGNORECASE,
+    )
 
     redacted = re.sub(
         r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
