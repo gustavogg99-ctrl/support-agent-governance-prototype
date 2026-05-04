@@ -86,6 +86,36 @@ SAMPLE_TICKETS = [
         subject="Issue with invoice",
         description="My CPF is 123.456.789-00 and I need help with an invoice problem.",
     ),
+        Ticket(
+        ticket_id="TCK-006",
+        user="Rafael Mendes",
+        subject="VPN connection issue",
+        description="I cannot access the VPN from home and need support to connect.",
+    ),
+    Ticket(
+        ticket_id="TCK-007",
+        user="Patricia Gomes",
+        subject="Critical system unavailable",
+        description="The customer service system is not working and business stopped.",
+    ),
+    Ticket(
+        ticket_id="TCK-008",
+        user="Bruno Almeida",
+        subject="Update my contact information",
+        description="Please update my email to bruno.almeida@example.com in the support records.",
+    ),
+    Ticket(
+        ticket_id="TCK-009",
+        user="Larissa Rocha",
+        subject="Exposed password in request",
+        description="My password is Company123 and I need help changing it urgently.",
+    ),
+    Ticket(
+        ticket_id="TCK-010",
+        user="Eduardo Martins",
+        subject="How to request a new monitor",
+        description="I would like to know how to request a new monitor for my workstation.",
+    ),
 ]
 
 
@@ -142,7 +172,7 @@ def classify_ticket(subject: str, description: str) -> str:
     if any(keyword in text for keyword in ["invoice", "question", "information", "how to", "request"]):
         return "Service Request"
 
-    if any(keyword in text for keyword in ["slow", "error", "crash", "not working", "issue", "problem"]):
+    if any(keyword in text for keyword in ["slow", "error", "crash", "not working", "issue", "problem", "vpn", "unavailable", "down"]):
         return "Technical Incident"
 
     return "General Support"
