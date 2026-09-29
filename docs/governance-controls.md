@@ -74,6 +74,8 @@ The agent must escalate a ticket to a human analyst when one or more of the foll
 
 Escalation is not a failure of the agent. It is a governance control.
 
+This list is the target control set. Section 12 shows which conditions the current prototype enforces in code.
+
 ---
 
 ## 6. Allowed Automation
@@ -195,7 +197,34 @@ These limitations are intentional for the initial phase.
 
 ---
 
-## 12. Summary
+## 12. Control Implementation Status
+
+This table separates controls that are enforced in `src/prototype.py` from controls that are defined at design level only. It exists so that no reader mistakes a documented intention for an implemented control.
+
+| Control | Status | Where / how |
+|---|---|---|
+| Escalate security-related tickets | Implemented | `evaluate_escalation()`: Security Incident category |
+| Escalate access requests for approval | Implemented | `evaluate_escalation()`: Access Request category |
+| Escalate when sensitive data is detected | Implemented | `detect_sensitive_data()` + `evaluate_escalation()` |
+| Escalate High priority tickets | Implemented | `evaluate_escalation()` |
+| Escalate unclassified or ambiguous tickets | Implemented | `evaluate_escalation()`: General Support fallback |
+| Block automation for restricted categories | Implemented | `evaluate_automation()`: Security Incident, Access Request |
+| Block automation when escalation is required | Implemented | `evaluate_automation()` |
+| Safe responses that never claim real actions | Implemented | `generate_safe_response()` fixed templates |
+| Decision reason recorded for every ticket | Implemented | `TicketAnalysis.escalation_reason`, `automation_decision_reason` |
+| Audit log with sensitive data redaction | Implemented | `redact_text()` + `write_audit_log()` |
+| Runtime logs excluded from version control | Implemented | `.gitignore` |
+| Invalid input handling | Implemented | CLI rejects unknown ticket IDs |
+| Separate Critical (P1) priority level | Design only | Prototype uses High / Medium / Low; see `decision-logic.md` Section 9 |
+| Separate Data Privacy category | Design only | Privacy cases are handled through sensitive data detection |
+| Confidence-based escalation | Design only | No confidence score in rule-based classification |
+| Multi-user or business-critical impact detection | Partial | Covered only through urgency keywords (e.g. "business stopped") |
+| Out-of-scope action detection | Partial | Covered only for access requests |
+| Log retention and access control | Design only | Local file, no rotation or access control |
+
+---
+
+## 13. Summary
 
 The governance model of the AI Autonomous Support Agent is based on controlled automation.
 

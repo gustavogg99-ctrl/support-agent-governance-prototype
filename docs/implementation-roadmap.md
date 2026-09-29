@@ -130,6 +130,8 @@ Potential future improvements include:
 - moving ticket data to a separate JSON or YAML file;
 - moving business rules to a configuration file;
 - improving classification logic;
+- restoring the planned four-level priority scale (P1–P4) and a separate Data Privacy category;
+- adding a confidence score to classification, with low-confidence tickets escalated;
 - adding structured unit tests;
 - improving audit log formatting;
 - adding a command-line summary export;

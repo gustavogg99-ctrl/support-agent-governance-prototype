@@ -97,7 +97,7 @@ ai-autonomous-support-agent/
 
 ### Requirements
 
-- Python 3.13 or higher
+- Python 3.10 or higher (standard library only, no packages to install)
 - Local terminal or Git Bash
 - No cloud services required
 - No Microsoft automation services required in this phase

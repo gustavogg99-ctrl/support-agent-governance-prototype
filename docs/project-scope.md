@@ -1,5 +1,7 @@
 # Project Scope — AI Autonomous Support Agent
 
+> **Note:** this is the Phase 1 planning document. It defines the target taxonomy (9 categories, P1–P4 priorities). The prototype implements a simplified version (6 categories, High / Medium / Low). The implemented rules and the mapping between both are in `docs/decision-logic.md`.
+
 ## 1. Project Overview
 
 The AI Autonomous Support Agent is a local prototype designed to simulate an AI-assisted support triage workflow in a corporate IT environment.

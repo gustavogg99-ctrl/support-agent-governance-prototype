@@ -76,6 +76,25 @@ Expected behavior:
 - generates a safe response;
 - updates the local audit log.
 
+Actual output (abridged):
+
+```text
+Ticket ID: TCK-009
+Subject: Exposed password in request
+Category: Security Incident
+Priority: High
+Sensitive Data Detected: True
+Sensitive Data Types: exposed_secret
+Human Escalation Required: True
+Escalation Reason: Security-related tickets require human review.
+Automation Allowed: False
+Automation Decision Reason: Automation is blocked for this category.
+Automated Response:
+Hello Larissa Rocha, your request has been received and classified as 'Security Incident'
+with priority 'High'. Due to internal control rules, this ticket will be reviewed by a
+human support analyst before any action is taken.
+```
+
 ---
 
 ## 5. Invalid Ticket Handling
@@ -109,6 +128,16 @@ The audit log is generated locally and is ignored by Git through `.gitignore`.
 This is intentional because logs may contain operational or sensitive information, even when redaction is applied.
 
 The repository documents the audit logging behavior but does not commit runtime log files.
+
+Example of redaction in the logged ticket description:
+
+```text
+Original:  My password is Company123 and I need help changing it urgently.
+Logged:    My password is [REDACTED_SECRET] and I need help changing it urgently.
+
+Original:  My CPF is 123.456.789-00 and I need help with an invoice problem.
+Logged:    My CPF is [REDACTED_CPF] and I need help with an invoice problem.
+```
 
 ---
 

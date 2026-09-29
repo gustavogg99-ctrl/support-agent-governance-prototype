@@ -247,6 +247,9 @@ def evaluate_escalation(
     if priority == "High":
         return True, "High priority tickets require human review."
 
+    if category == "General Support":
+        return True, "The ticket could not be classified with confidence and requires human review."
+
     return False, "No mandatory escalation rule was triggered."
 
 
