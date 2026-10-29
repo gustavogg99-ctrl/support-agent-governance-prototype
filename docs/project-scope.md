@@ -1,10 +1,10 @@
-# Project Scope — AI Autonomous Support Agent
+# Project Scope — Support Agent Governance Prototype
 
 > **Note:** this is the Phase 1 planning document. It defines the target taxonomy (9 categories, P1–P4 priorities). The prototype implements a simplified version (6 categories, High / Medium / Low). The implemented rules and the mapping between both are in `docs/decision-logic.md`.
 
 ## 1. Project Overview
 
-The AI Autonomous Support Agent is a local prototype designed to simulate an AI-assisted support triage workflow in a corporate IT environment.
+The Support Agent Governance Prototype is a local prototype designed to simulate the governance layer of an AI-assisted support triage workflow in a corporate IT environment.
 
 The agent receives support ticket descriptions, classifies the request, assigns an initial priority level, identifies potential risk indicators, decides whether the case can receive an automated response, and determines when human escalation is required.
 
@@ -26,7 +26,7 @@ The problem this project addresses is the lack of a standardized first-level tri
 
 ## 3. Project Objective
 
-The objective of this project is to design and document a functional prototype of an AI-assisted support agent capable of:
+The objective of this project is to design and document a functional prototype of the governance layer of an AI-assisted support agent, capable of:
 
 1. receiving simulated support tickets;
 2. classifying the ticket into predefined categories;
@@ -332,7 +332,7 @@ The final deliverables of Phase 1 are:
 
 ## 15. Phase 1 Conclusion
 
-Phase 1 defines the functional scope of the AI Autonomous Support Agent.
+Phase 1 defines the functional scope of the Support Agent Governance Prototype.
 
 At this stage, the project has a clear purpose, target scenario, ticket taxonomy, priority structure, escalation principles, automation limits, governance principles, and success criteria.
 

@@ -1,4 +1,4 @@
-# AI Autonomous Support Agent
+# Support Agent Governance Prototype
 
 A local Python prototype of the governance layer for an AI support agent in corporate IT service management scenarios.
 
@@ -75,7 +75,7 @@ The current prototype includes:
 ## 5. Repository Structure
 
 ```text
-ai-autonomous-support-agent/
+support-agent-governance-prototype/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore

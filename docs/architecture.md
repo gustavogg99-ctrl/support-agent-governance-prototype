@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document describes the architecture of the AI Autonomous Support Agent prototype: its components, the data flow between them, where governance controls sit, and how the design would change in a production setting.
+This document describes the architecture of the Support Agent Governance Prototype prototype: its components, the data flow between them, where governance controls sit, and how the design would change in a production setting.
 
 The visual version is in `assets/architecture-diagram.png` (editable source: `assets/architecture-diagram.drawio`).
 

@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document provides sample command-line interactions for the AI Autonomous Support Agent prototype.
+This document provides sample command-line interactions for the Support Agent Governance Prototype prototype.
 
 The examples show how the prototype is executed, how tickets are listed, how individual tickets are processed, and how invalid ticket IDs are handled.
 

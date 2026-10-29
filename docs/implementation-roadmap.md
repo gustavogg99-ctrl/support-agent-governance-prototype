@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document describes the implementation roadmap for the AI Autonomous Support Agent prototype.
+This document describes the implementation roadmap for the Support Agent Governance Prototype prototype.
 
 The roadmap separates the current local prototype from possible future improvements and production-oriented capabilities.
 

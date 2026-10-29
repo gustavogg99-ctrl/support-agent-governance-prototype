@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document defines the governance controls for the AI Autonomous Support Agent prototype.
+This document defines the governance controls for the Support Agent Governance Prototype prototype.
 
 The goal is to demonstrate how AI-enabled automation can be designed with responsible AI principles, technology risk controls, auditability, human oversight, and clear operational boundaries.
 
@@ -226,7 +226,7 @@ This table separates controls that are enforced in `src/prototype.py` from contr
 
 ## 13. Summary
 
-The governance model of the AI Autonomous Support Agent is based on controlled automation.
+The governance model of the Support Agent Governance Prototype is based on controlled automation.
 
 The agent is allowed to support triage, classification, prioritization, response drafting, and escalation recommendation.
 

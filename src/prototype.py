@@ -1,5 +1,5 @@
 """
-AI Autonomous Support Agent - Local Prototype
+Support Agent Governance Prototype
 
 This file implements a local Python prototype for simulated IT support ticket triage.
 
@@ -572,7 +572,7 @@ def main() -> None:
     Execute the local prototype using simulated tickets.
     """
 
-    print("AI Autonomous Support Agent - Local Prototype")
+    print("Support Agent Governance Prototype")
 
     tickets_to_process = select_tickets_from_arguments(sys.argv[1:])
 
