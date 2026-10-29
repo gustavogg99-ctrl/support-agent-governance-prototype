@@ -1,6 +1,8 @@
 # AI Autonomous Support Agent
 
-A local Python prototype that simulates an AI-enabled autonomous support agent for corporate IT service management scenarios.
+A local Python prototype of the governance layer for an AI support agent in corporate IT service management scenarios.
+
+> **Current scope:** every decision is made by deterministic rules. There is no LLM integration yet (it is on the roadmap) and no automated test suite yet.
 
 The project focuses on ticket triage, request classification, incident prioritization, human escalation rules, safe automated responses, sensitive data detection, and audit logging.
 
@@ -10,7 +12,7 @@ This repository was created as a practical portfolio project for Governance, Ris
 
 ## 1. Project Overview
 
-The AI Autonomous Support Agent simulates a support environment where incoming tickets are processed by a rule-based AI support workflow.
+The prototype simulates a support environment where incoming tickets are processed by a deterministic, rule-based workflow. These rules are the controls an AI support agent would have to operate within.
 
 The prototype evaluates each ticket and decides whether the request can receive a safe automated response or must be escalated to a human analyst.
 
@@ -37,7 +39,7 @@ This prototype addresses these problems by simulating a structured decision work
 
 ## 3. Objectives
 
-The project aims to demonstrate how an AI-enabled support agent can:
+The project demonstrates how the governance layer of an AI support agent can:
 
 - classify support tickets into predefined categories;
 - assign priority levels based on ticket content and risk;
@@ -260,7 +262,7 @@ Possible next steps include:
 - adding configuration files for business rules;
 - separating data, logic, and response templates;
 - integrating with a real ticketing system in a future phase;
-- evaluating controlled AI model integration;
+- integrating an LLM for classification, with the current rules acting as guardrails (planned for v2);
 - mapping controls to AI Governance, GRC, IT Risk, and ITSM frameworks.
 
 Microsoft-based automation tools such as Copilot Studio, Power Automate, Azure, and Microsoft 365 Developer are intentionally excluded from the initial phase and may be considered only as a future roadmap option.
