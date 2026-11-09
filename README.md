@@ -2,11 +2,9 @@
 
 A local Python prototype of the governance layer for an AI support agent in corporate IT service management scenarios.
 
-> **Current scope:** every decision is made by deterministic rules. There is no LLM integration yet (it is on the roadmap) and no automated test suite yet.
+> **Current scope:** every decision is made by deterministic rules. There is no LLM integration yet (it is on the roadmap). The rules are covered by an automated test suite (20 tests, standard library only) that runs in CI on every push.
 
 The project focuses on ticket triage, request classification, incident prioritization, human escalation rules, safe automated responses, sensitive data detection, and audit logging.
-
-This repository was created as a practical portfolio project for Governance, Risk and Compliance (GRC), AI Governance, Technology Risk, Responsible AI, ITSM, and automation.
 
 ---
 
@@ -79,6 +77,7 @@ support-agent-governance-prototype/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
+├── .github/workflows/tests.yml
 ├── assets/
 │   ├── architecture-diagram.drawio
 │   └── architecture-diagram.png
@@ -89,8 +88,10 @@ support-agent-governance-prototype/
 │   ├── implementation-roadmap.md
 │   ├── project-scope.md
 │   └── sample-interactions.md
-└── src/
-    └── prototype.py
+├── src/
+│   └── prototype.py
+└── tests/
+    └── test_prototype.py
 ```
 
 ---
@@ -140,9 +141,19 @@ This validates how the prototype handles an unknown ticket ID.
 
 ---
 
-## 7. Validated Prototype Results
+### Run the tests
 
-During local validation, the prototype successfully processed the simulated ticket set with the following result:
+```bash
+python -m unittest discover -s tests -v
+```
+
+The suite checks the expected result of every simulated ticket, each governance rule (escalation, automation blocking, priority), sensitive-data detection, audit-log redaction and the command-line options. A change to a rule has to change a test too.
+
+---
+
+## 7. Prototype Results
+
+Running all simulated tickets produces the following summary (also asserted by `test_published_summary`):
 
 ```text
 Total tickets processed: 10
@@ -150,15 +161,6 @@ Human escalation required: 6
 Automation allowed: 4
 Automation blocked: 6
 Sensitive data cases: 3
-```
-
-The following commands were tested successfully:
-
-```bash
-py src/prototype.py
-py src/prototype.py --list
-py src/prototype.py --ticket TCK-009
-py src/prototype.py --ticket TCK-999
 ```
 
 ---
@@ -257,7 +259,6 @@ Possible next steps include:
 - improving the ticket classification logic;
 - adding more simulated ticket scenarios;
 - expanding sensitive data detection patterns;
-- creating a structured test file;
 - improving audit log formatting;
 - adding configuration files for business rules;
 - separating data, logic, and response templates;
@@ -266,25 +267,3 @@ Possible next steps include:
 - mapping controls to AI Governance, GRC, IT Risk, and ITSM frameworks.
 
 Microsoft-based automation tools such as Copilot Studio, Power Automate, Azure, and Microsoft 365 Developer are intentionally excluded from the initial phase and may be considered only as a future roadmap option.
-
----
-
-## 14. Career Relevance
-
-This project demonstrates practical skills related to:
-
-- AI Governance;
-- Responsible AI;
-- Governance, Risk and Compliance;
-- Technology Risk;
-- IT Service Management;
-- ITIL-inspired incident handling;
-- support automation;
-- auditability;
-- human-in-the-loop controls;
-- secure automation boundaries;
-- documentation for technical and non-technical stakeholders.
-
-It is designed to support professional positioning for roles involving GRC, AI Governance, Technology Risk, IT Risk, ITSM, automation governance, and digital transformation.
-
----
