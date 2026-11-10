@@ -1,0 +1,3 @@
+# Optional: only needed to call the real API (src/llm_classifier.py, evaluation runs).
+# The prototype and the tests use the Python standard library only.
+anthropic>=2.8,<3
