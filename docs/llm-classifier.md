@@ -38,7 +38,7 @@ ok=False → the ticket goes to a person, and the failure is counted in the eval
 ## Prompt versions
 
 - `v1`: minimal: lists the categories and priorities and defines sensitive data. It deliberately does not explain the categories. It is the starting point for the evaluation.
-- `v2` (Part 4): adds the written policy from `docs/decision-logic.md`. It is derived from the documented policy, never from individual evaluation tickets.
+- `v2` (Part 4): adds the written policy from `docs/decision-logic.md`. It is derived from the documented policy, never from individual evaluation tickets (a test enforces this). The comparison of `v1` and `v2` is in `docs/evaluation-run.md`.
 
 ## Running it against the real API
 
