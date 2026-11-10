@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-10 (Parts 1–3 merged in the first chat; handoff 1 done; this chat started at Part 4 and counts from 0; Part 4 in progress)._
+_Last updated: 2026-11-10 (Parts 1–3 merged in the first chat; handoff 1 done; this chat started at Part 4 and counts from 0; Part 4 done, awaiting merge: 1 part in this chat)._
 
 ## Goal
 
@@ -56,11 +56,11 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | 1 | `AGENTS.md`, this roadmap; evaluation set of 30 labelled synthetic tickets (`data/eval_tickets.jsonl`, `docs/evaluation-set.md`); rules-only baseline: 9/30 categories, 17/30 priorities, 8 of 21 review-required tickets wrongly allowed to automate | AGENT-V2-02 | #2 |
 | 2 | `src/llm_classifier.py`: prompt v1 in `prompts/`, structured outputs + local validation, every failure → `ok=False` (a person decides); SDK optional behind `LLMClient`; scripted client in tests; `docs/llm-classifier.md`. Not yet wired into the decision flow | AGENT-V2-03 | #3 |
 | 3 | `src/agent.py`: guardrail `combine()` (rules block → stays blocked; LLM invalid, disagreement or LLM-required review → person), LLM reply draft only when automation is allowed, `check_draft()`, explicit human approval, simulated send, `agent_audit_log.jsonl` with both decisions; `prompts/reply_v1.md`; `docs/guardrail.md` | AGENT-V2-04, AGENT-V2-10 | #4 |
+| 4 | `src/evaluate.py` (2 prompts × 2 models, final decision through the guardrail, cost from reported tokens), `prompts/classify_v2.md` (approved by Gustavo), `tests/test_evaluate.py`, `docs/evaluation-run.md`. Run of 10/11/2026 committed in `results/eval_results.json` (US$ 0.1676): category 21→28/30 and unsafe automation 1→0 of 21 from v1 to v2 on both models; rules only: 9/30 and 8/21 | AGENT-V2-07 | #6 |
 
 ## Next (in order)
 
-1. **Part 4 (AGENT-V2-07), in progress, branch `part-4-evaluate`, PR #6:** code, `prompts/classify_v2.md`, simulated tests and `docs/evaluation-run.md` are written. Waiting on Gustavo: (a) approve the text of prompt v2 in the PR; (b) run `py src/evaluate.py --output results/eval_results.json` on his machine and bring `results/eval_results.json` back, to be committed in the same PR. Expected cost of the full run (120 calls): well under US$ 1 (about US$ 0.15 from the smoke-test tokens, a bit more now that v2 is longer).
-2. **Part 5 (AGENT-V2-08):** README with the results table generated from Gustavo's run, and the limitations.
+1. **Part 5 (AGENT-V2-08):** README with the results table (`py src/evaluate.py --table results/eval_results.json`, from the run committed in Part 4) and the limitations. Take the numbers and the reading of them from `docs/evaluation-run.md`; do not recompute by hand. Declare as limitations: 30 synthetic tickets, one run, prompt v2 written from the same policy that produced the labels, classification only.
 
 ## Later (no deadline, after 16/11)
 
