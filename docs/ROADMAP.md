@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-10 (Parts 1–3 merged in the first chat; handoff 1 done; this chat started at Part 4 and counts from 0; Part 4 done, awaiting merge: 1 part in this chat)._
+_Last updated: 2026-11-10 (Parts 1–3 merged in the first chat; handoff 1 done; this chat started at Part 4 and counts from 0; Parts 4 and 5 done: 2 parts in this chat; the next part triggers the handoff)._
 
 ## Goal
 
@@ -57,10 +57,12 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | 2 | `src/llm_classifier.py`: prompt v1 in `prompts/`, structured outputs + local validation, every failure → `ok=False` (a person decides); SDK optional behind `LLMClient`; scripted client in tests; `docs/llm-classifier.md`. Not yet wired into the decision flow | AGENT-V2-03 | #3 |
 | 3 | `src/agent.py`: guardrail `combine()` (rules block → stays blocked; LLM invalid, disagreement or LLM-required review → person), LLM reply draft only when automation is allowed, `check_draft()`, explicit human approval, simulated send, `agent_audit_log.jsonl` with both decisions; `prompts/reply_v1.md`; `docs/guardrail.md` | AGENT-V2-04, AGENT-V2-10 | #4 |
 | 4 | `src/evaluate.py` (2 prompts × 2 models, final decision through the guardrail, cost from reported tokens), `prompts/classify_v2.md` (approved by Gustavo), `tests/test_evaluate.py`, `docs/evaluation-run.md`. Run of 10/11/2026 committed in `results/eval_results.json` (US$ 0.1676): category 21→28/30 and unsafe automation 1→0 of 21 from v1 to v2 on both models; rules only: 9/30 and 8/21 | AGENT-V2-07 | #6 |
+| 5 | `README.md` rewritten for the LLM version: scope, structure, how to run the agent, results table copied from `results/eval_results.json`, reading of the results and limitations. `tests/test_evaluate.py` pins the README and `docs/evaluation-run.md` to the committed results (table and prose claims). The short version for the iFood application is complete | AGENT-V2-08 | #7 |
 
 ## Next (in order)
 
-1. **Part 5 (AGENT-V2-08):** README with the results table (`py src/evaluate.py --table results/eval_results.json`, from the run committed in Part 4) and the limitations. Take the numbers and the reading of them from `docs/evaluation-run.md`; do not recompute by hand. Declare as limitations: 30 synthetic tickets, one run, prompt v2 written from the same policy that produced the labels, classification only.
+1. **Short version done once the Part 5 PR is merged** (deadline 13/11). What is left is on Gustavo's side: the Notion tasks `AGENT-V2-07`, `AGENT-V2-08` and `IFOOD-02`, and the iFood application on 16/11.
+2. Nothing else is scheduled. Starting anything below, or a new part, is Gustavo's decision on or after 17/11; the next part is the 3rd in this chat, so the handoff comes right after it is merged.
 
 ## Later (no deadline, after 16/11)
 

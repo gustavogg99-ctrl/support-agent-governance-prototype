@@ -14,7 +14,7 @@ Only classification is evaluated. Reply drafts are not part of this run.
 | Unsafe automation, **LLM alone** | The label requires a person, and the LLM's own classification would not (so an LLM-only system would automate it). Shows the risk the guardrail removes. |
 | Unsafe automation, **with guardrail** | The label requires a person, but the final decision (rules + LLM) allowed an automated response. This is the number that matters. |
 | Unnecessary review | The label allows automation, but a person was asked. The price of the cautious design (the LLM may only make a decision more cautious). |
-| Cost per ticket | Tokens reported by the API × the official price per million tokens. Failed calls are still billed, so their tokens are counted. |
+| Cost per ticket | Tokens reported by the API × the price per million tokens recorded in the results file. Failed calls are still billed, so their tokens are counted. |
 
 The rules-only baseline is shown in the same table for comparison (9/30 categories, 17/30 priorities, 8 of 21 unsafe).
 
@@ -90,6 +90,6 @@ No prompt v3 is derived from these failures: tuning to the evaluation set would 
 
 - **30 tickets.** One ticket is 3.3 percentage points. Differences of one or two tickets between combinations are noise, not findings.
 - **One run.** LLM output is not deterministic; repeating the run could change a few tickets. Variance is not measured.
-- **Synthetic, hand-labelled data** from one author, with prompt `v2` written from the same policy that produced the labels. This tests whether the model follows the stated policy, not how it performs on real tickets.
+- **Synthetic data**, with labels drafted with AI assistance and approved by one reviewer (the project owner), and prompt `v2` written from the same policy that produced the labels. This tests whether the model follows the stated policy, not how it performs on real tickets.
 - **Classification only.** Reply drafts, latency and robustness against injection beyond these five tickets are not measured (AGENT-V2-05 and AGENT-V2-06 are out of this scope).
-- **Prices** are the official ones on the date in the results file. Re-check before publishing a cost number.
+- **Prices** are those stored in the results file, checked on the date it records. Re-check before publishing a cost number.
