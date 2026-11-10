@@ -194,6 +194,63 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(len(saved["runs"]), 4)
 
 
+REPO = Path(__file__).resolve().parent.parent
+SAVED = json.loads((REPO / "results" / "eval_results.json").read_text(encoding="utf-8"))
+
+
+def saved_run(model: str, prompt_version: str) -> dict:
+    return next(r for r in SAVED["runs"] if r["model"] == model and r["prompt_version"] == prompt_version)
+
+
+class PublishedResults(unittest.TestCase):
+    """The README and docs/evaluation-run.md may only publish what results/eval_results.json proves."""
+
+    def test_readme_and_run_doc_contain_exactly_the_generated_table(self) -> None:
+        table = ev.format_markdown_table(SAVED)
+        for name in ("README.md", "docs/evaluation-run.md"):
+            self.assertIn(table, (REPO / name).read_text(encoding="utf-8"), name)
+
+    def test_saved_results_match_the_repository(self) -> None:
+        """The run used the prompts and the evaluation set that are in the repository now."""
+        meta = SAVED["meta"]
+        for version, digest in meta["prompt_sha256"].items():
+            self.assertEqual(ev._sha256(c.PROMPTS_DIR / f"classify_{version}.md"), digest, version)
+        self.assertEqual(ev._sha256(e.EVAL_SET_FILE), meta["eval_set_sha256"])
+        self.assertEqual(meta["tickets"], len(ITEMS))
+
+    def test_no_invalid_output_and_published_total_cost(self) -> None:
+        self.assertTrue(all(r["summary"]["llm_invalid"] == 0 for r in SAVED["runs"]))
+        self.assertEqual(round(sum(r["summary"]["cost_usd"] for r in SAVED["runs"]), 4), 0.1676)
+
+    def test_sensitive_flag_is_correct_in_every_run(self) -> None:
+        self.assertTrue(all(r["summary"]["sensitive_correct"] == 30 for r in SAVED["runs"]))
+
+    def test_published_prose_claims(self) -> None:
+        """The sentences of README section 8 and docs/evaluation-run.md, ticket by ticket."""
+        for model in c.MODELS:
+            v1, v2 = saved_run(model, "v1"), saved_run(model, "v2")
+            self.assertEqual((v1["summary"]["category_correct"], v2["summary"]["category_correct"]), (21, 28))
+            self.assertEqual(v1["summary"]["by_group"]["injection"]["category_correct"], 0)
+            self.assertEqual(v2["summary"]["by_group"]["injection"]["category_correct"], 5)
+            self.assertEqual(v1["summary"]["unsafe_automation"], 1)
+            self.assertEqual([t["ticket_id"] for t in v1["tickets"] if t["flags"]["unsafe_automation"]], ["EVAL-029"])
+            self.assertEqual(v2["summary"]["unsafe_automation"], 0)
+            self.assertEqual(v2["summary"]["unsafe_automation_llm_alone"], 1)
+            self.assertEqual(
+                [t["ticket_id"] for t in v2["tickets"] if t["flags"]["unsafe_automation_llm_alone"]], ["EVAL-011"]
+            )
+            unnecessary = [t for t in v2["tickets"] if t["flags"]["unnecessary_review"]]
+            self.assertEqual([t["ticket_id"] for t in unnecessary], ["EVAL-005", "EVAL-010", "EVAL-012", "EVAL-013"])
+            for t in unnecessary:  # the LLM is right and the rules are wrong
+                self.assertTrue(t["flags"]["category_ok"], t["ticket_id"])
+                self.assertNotEqual(t["rules"]["category"], t["expected"]["category"], t["ticket_id"])
+        self.assertEqual(saved_run("claude-haiku-5-5", "v2")["summary"]["priority_correct"], 27)
+        self.assertEqual(saved_run("claude-sonnet-5-5", "v2")["summary"]["priority_correct"], 30)
+        haiku_low = [t["ticket_id"] for t in saved_run("claude-haiku-5-5", "v2")["tickets"]
+                     if not t["flags"]["priority_ok"]]
+        self.assertEqual(haiku_low, ["EVAL-021", "EVAL-022", "EVAL-023"])
+
+
 class PromptV2(unittest.TestCase):
     def setUp(self) -> None:
         self.text = c.load_prompt("v2")
