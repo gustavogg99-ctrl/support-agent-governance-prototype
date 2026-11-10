@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-10 (Part 1 in review)._
+_Last updated: 2026-11-10 (Part 1 merged; Part 2 in review)._
 
 ## Goal
 
@@ -41,6 +41,8 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | `human_review` is derived from category, priority and sensitive data | One source of truth; a contradictory label is rejected by `validate_ticket()` | Free-form review flag: labels could contradict the policy |
 | Prompt-injection attempts are labelled Security Incident | Manipulating the agent is a security event regardless of the request | Labelling the underlying request: hides the attack from the metrics |
 | Models to compare: Claude Haiku 5.5 × Claude Sonnet 5.5 | Small vs mid-size, about 20× apart in price per ticket: tests whether the cheap model is enough when the guardrail holds the risk | Opus: higher cost, does not change the question |
+| Structured outputs (`output_config.format`) plus local validation; effort `low` for both models | The schema reduces malformed output, the local check is what the system trusts; equal effort keeps the comparison fair | Free-text parsing: fragile. Trusting the schema alone: enum casing is not guaranteed by the API |
+| Prompt v1 is minimal; v2 adds the written policy | The comparison measures the value of stating the policy, with no tuning to evaluation tickets | v2 tuned on failures of v1 on the evaluation set: overfits a 30-ticket set |
 
 ## Done
 
@@ -48,14 +50,14 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 |---|---|---|---|
 | — | 20 unittest tests pinning the current rules, CI on Python 3.10 and 3.13 | AGENT-V2-01 | #1 |
 | 1 | `AGENTS.md`, this roadmap; evaluation set of 30 labelled synthetic tickets (`data/eval_tickets.jsonl`, `docs/evaluation-set.md`); rules-only baseline: 9/30 categories, 17/30 priorities, 8 of 21 review-required tickets wrongly allowed to automate | AGENT-V2-02 | #2 |
+| 2 | `src/llm_classifier.py`: prompt v1 in `prompts/`, structured outputs + local validation, every failure → `ok=False` (a person decides); SDK optional behind `LLMClient`; scripted client in tests; `docs/llm-classifier.md`. Not yet wired into the decision flow | AGENT-V2-03 | #3 |
 
 ## Next (in order)
 
-1. **Part 2 (AGENT-V2-03):** `src/llm_classifier.py`. Prompt v1 in a versioned file; output JSON validated against the closed enums; invalid output → human review and counted as a failure; real client (SDK, optional) and simulated client for tests.
-2. **Part 3 (AGENT-V2-04 + AGENT-V2-10):** guardrail combination (most restrictive decision wins; disagreement on category or priority → person); suggested reply shown only when automation is allowed; approve/reject in the CLI; audit log with both decisions.
-3. **Handoff** (docs-only PR) → new chat.
-4. **Part 4 (AGENT-V2-07):** `src/evaluate.py`: 2 prompt versions × 2 models; accuracy, guardrail blocks, disagreements, invalid JSON, cost from the tokens the API reports; simulated tests; the command for Gustavo to run. Results file committed.
-5. **Part 5 (AGENT-V2-08):** README with the results table generated from Gustavo's run, and the limitations.
+1. **Part 3 (AGENT-V2-04 + AGENT-V2-10):** guardrail combination (most restrictive decision wins; disagreement on category or priority → person); suggested reply shown only when automation is allowed; approve/reject in the CLI; audit log with both decisions.
+2. **Handoff** (docs-only PR) → new chat.
+3. **Part 4 (AGENT-V2-07):** `src/evaluate.py`: 2 prompt versions × 2 models; accuracy, guardrail blocks, disagreements, invalid JSON, cost from the tokens the API reports; simulated tests; the command for Gustavo to run. Results file committed.
+4. **Part 5 (AGENT-V2-08):** README with the results table generated from Gustavo's run, and the limitations.
 
 ## Later (no deadline, after 16/11)
 

@@ -77,10 +77,13 @@ support-agent-governance-prototype/
 ├── AGENTS.md
 ├── README.md
 ├── requirements.txt
+├── requirements-llm.txt
 ├── .gitignore
 ├── .github/workflows/tests.yml
 ├── data/
 │   └── eval_tickets.jsonl
+├── prompts/
+│   └── classify_v1.md
 ├── assets/
 │   ├── architecture-diagram.drawio
 │   └── architecture-diagram.png
@@ -90,14 +93,17 @@ support-agent-governance-prototype/
 │   ├── evaluation-set.md
 │   ├── governance-controls.md
 │   ├── implementation-roadmap.md
+│   ├── llm-classifier.md
 │   ├── project-scope.md
 │   ├── ROADMAP.md
 │   └── sample-interactions.md
 ├── src/
 │   ├── eval_set.py
+│   ├── llm_classifier.py
 │   └── prototype.py
 └── tests/
     ├── test_eval_set.py
+    ├── test_llm_classifier.py
     └── test_prototype.py
 ```
 
@@ -249,6 +255,7 @@ Additional documentation is available in the `docs/` folder:
 - `docs/sample-interactions.md` — example prototype interactions;
 - `docs/implementation-roadmap.md` — future implementation roadmap;
 - `docs/evaluation-set.md` — labelled evaluation set and rules-only baseline;
+- `docs/llm-classifier.md` — LLM classification with validated JSON output (not yet wired into the decision flow);
 - `docs/ROADMAP.md` — current status of the LLM version (v2).
 
 ---
