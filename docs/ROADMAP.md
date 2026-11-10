@@ -59,7 +59,7 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 
 ## Next (in order)
 
-1. **Part 4 (AGENT-V2-07), in progress, branch `part-4-evaluate`:** code, `prompts/classify_v2.md`, simulated tests and `docs/evaluation-run.md` are written. Waiting on Gustavo: (a) approve the text of prompt v2 in the PR; (b) run `py src/evaluate.py --output results/eval_results.json` on his machine and bring `results/eval_results.json` back, to be committed in the same PR. Expected cost of the full run (120 calls): well under US$ 1 (about US$ 0.15 from the smoke-test tokens, a bit more now that v2 is longer).
+1. **Part 4 (AGENT-V2-07), in progress, branch `part-4-evaluate`, PR #6:** code, `prompts/classify_v2.md`, simulated tests and `docs/evaluation-run.md` are written. Waiting on Gustavo: (a) approve the text of prompt v2 in the PR; (b) run `py src/evaluate.py --output results/eval_results.json` on his machine and bring `results/eval_results.json` back, to be committed in the same PR. Expected cost of the full run (120 calls): well under US$ 1 (about US$ 0.15 from the smoke-test tokens, a bit more now that v2 is longer).
 2. **Part 5 (AGENT-V2-08):** README with the results table generated from Gustavo's run, and the limitations.
 
 ## Later (no deadline, after 16/11)
