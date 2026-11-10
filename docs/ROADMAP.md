@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-10 (Part 1 merged; Part 2 in review)._
+_Last updated: 2026-11-10 (Parts 1 and 2 merged; Part 3 in review; handoff after its merge)._
 
 ## Goal
 
@@ -43,6 +43,8 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | Models to compare: Claude Haiku 5.5 × Claude Sonnet 5.5 | Small vs mid-size, about 20× apart in price per ticket: tests whether the cheap model is enough when the guardrail holds the risk | Opus: higher cost, does not change the question |
 | Structured outputs (`output_config.format`) plus local validation; effort `low` for both models | The schema reduces malformed output, the local check is what the system trusts; equal effort keeps the comparison fair | Free-text parsing: fragile. Trusting the schema alone: enum casing is not guaranteed by the API |
 | Prompt v1 is minimal; v2 adds the written policy | The comparison measures the value of stating the policy, with no tuning to evaluation tickets | v2 tuned on failures of v1 on the evaluation set: overfits a 30-ticket set |
+| Automation only when rules **and** LLM agree on a low-risk case; any disagreement → person | First version: the LLM may only make decisions more cautious. Part 4 measures the extra human review this costs | Letting the LLM settle disagreements: raises automation, but without evidence yet |
+| The LLM drafts a reply only when automation is allowed; the draft is checked (sensitive data, action claims, length) and needs an explicit "yes" | No draft reaches a requester on a risky ticket; nothing is sent by default | Fixed templates only: safe but not "LLM drafts"; sending without approval: out of policy |
 
 ## Done
 
@@ -51,13 +53,13 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | — | 20 unittest tests pinning the current rules, CI on Python 3.10 and 3.13 | AGENT-V2-01 | #1 |
 | 1 | `AGENTS.md`, this roadmap; evaluation set of 30 labelled synthetic tickets (`data/eval_tickets.jsonl`, `docs/evaluation-set.md`); rules-only baseline: 9/30 categories, 17/30 priorities, 8 of 21 review-required tickets wrongly allowed to automate | AGENT-V2-02 | #2 |
 | 2 | `src/llm_classifier.py`: prompt v1 in `prompts/`, structured outputs + local validation, every failure → `ok=False` (a person decides); SDK optional behind `LLMClient`; scripted client in tests; `docs/llm-classifier.md`. Not yet wired into the decision flow | AGENT-V2-03 | #3 |
+| 3 | `src/agent.py`: guardrail `combine()` (rules block → stays blocked; LLM invalid, disagreement or LLM-required review → person), LLM reply draft only when automation is allowed, `check_draft()`, explicit human approval, simulated send, `agent_audit_log.jsonl` with both decisions; `prompts/reply_v1.md`; `docs/guardrail.md` | AGENT-V2-04, AGENT-V2-10 | PR_TBD |
 
 ## Next (in order)
 
-1. **Part 3 (AGENT-V2-04 + AGENT-V2-10):** guardrail combination (most restrictive decision wins; disagreement on category or priority → person); suggested reply shown only when automation is allowed; approve/reject in the CLI; audit log with both decisions.
-2. **Handoff** (docs-only PR) → new chat.
-3. **Part 4 (AGENT-V2-07):** `src/evaluate.py`: 2 prompt versions × 2 models; accuracy, guardrail blocks, disagreements, invalid JSON, cost from the tokens the API reports; simulated tests; the command for Gustavo to run. Results file committed.
-4. **Part 5 (AGENT-V2-08):** README with the results table generated from Gustavo's run, and the limitations.
+1. **Handoff** (docs-only PR) → new chat.
+2. **Part 4 (AGENT-V2-07):** `src/evaluate.py`: 2 prompt versions × 2 models; accuracy, guardrail blocks, disagreements, invalid JSON, cost from the tokens the API reports; simulated tests; the command for Gustavo to run. Results file committed.
+3. **Part 5 (AGENT-V2-08):** README with the results table generated from Gustavo's run, and the limitations.
 
 ## Later (no deadline, after 16/11)
 
