@@ -2,7 +2,7 @@
 
 A local Python prototype of the governance layer for an AI support agent in corporate IT service management scenarios.
 
-> **Current scope:** every decision is made by deterministic rules. There is no LLM integration yet (it is on the roadmap). The rules are covered by an automated test suite (20 tests, standard library only) that runs in CI on every push.
+> **Current scope:** every decision is made by deterministic rules. There is no LLM integration yet (it is on the roadmap). The rules are covered by an automated test suite (standard library only) that runs in CI on every push. A labelled evaluation set of 30 synthetic tickets measures them (`docs/evaluation-set.md`); the LLM version is in progress (`docs/ROADMAP.md`).
 
 The project focuses on ticket triage, request classification, incident prioritization, human escalation rules, safe automated responses, sensitive data detection, and audit logging.
 
@@ -74,23 +74,30 @@ The current prototype includes:
 
 ```text
 support-agent-governance-prototype/
+├── AGENTS.md
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
 ├── .github/workflows/tests.yml
+├── data/
+│   └── eval_tickets.jsonl
 ├── assets/
 │   ├── architecture-diagram.drawio
 │   └── architecture-diagram.png
 ├── docs/
 │   ├── architecture.md
 │   ├── decision-logic.md
+│   ├── evaluation-set.md
 │   ├── governance-controls.md
 │   ├── implementation-roadmap.md
 │   ├── project-scope.md
+│   ├── ROADMAP.md
 │   └── sample-interactions.md
 ├── src/
+│   ├── eval_set.py
 │   └── prototype.py
 └── tests/
+    ├── test_eval_set.py
     └── test_prototype.py
 ```
 
@@ -148,6 +155,14 @@ python -m unittest discover -s tests -v
 ```
 
 The suite checks the expected result of every simulated ticket, each governance rule (escalation, automation blocking, priority), sensitive-data detection, audit-log redaction and the command-line options. A change to a rule has to change a test too.
+
+### Measure the rules on the evaluation set
+
+```bash
+py src/eval_set.py
+```
+
+This compares the rules with the 30 labelled tickets in `data/eval_tickets.jsonl` and prints the baseline described in `docs/evaluation-set.md`.
 
 ---
 
@@ -232,7 +247,9 @@ Additional documentation is available in the `docs/` folder:
 - `docs/decision-logic.md` — classification, prioritization, and escalation logic;
 - `docs/governance-controls.md` — governance and risk controls;
 - `docs/sample-interactions.md` — example prototype interactions;
-- `docs/implementation-roadmap.md` — future implementation roadmap.
+- `docs/implementation-roadmap.md` — future implementation roadmap;
+- `docs/evaluation-set.md` — labelled evaluation set and rules-only baseline;
+- `docs/ROADMAP.md` — current status of the LLM version (v2).
 
 ---
 

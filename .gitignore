@@ -4,3 +4,5 @@ audit_log.jsonl
 # Python cache files
 __pycache__/
 *.pyc
+# Local secrets (never commit an API key)
+.env
