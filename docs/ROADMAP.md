@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-10 (Parts 1 and 2 merged; Part 3 in review; handoff after its merge)._
+_Last updated: 2026-11-10 (Parts 1–3 merged in the first chat; handoff 1 done; the next chat starts at Part 4 and counts from 0)._
 
 ## Goal
 
@@ -27,6 +27,8 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 - **Labels are Gustavo's call.** Claude drafts labels with a rationale; Gustavo reviews and approves them in the PR. Never change a label without his OK, and never tune a prompt to a specific evaluation ticket.
 - **Real API runs:** Claude gives Gustavo the exact command; he runs it on his machine with `ANTHROPIC_API_KEY` in the environment and brings the output file back. The key never appears in chat, commits or logs.
 - **API account (checked 10/11/2026 in the Claude Console):** US$ 5.00 credit grant, auto-reload off (the balance is a hard spending cap), 1 API key in the Default workspace expiring 10/12/2026, evaluation tier rate limits (1,000 requests per model). Official prices on 10/11/2026: Haiku 5.5 US$ 0.10 input / US$ 0.50 output per million tokens (prompts up to 100k tokens); Sonnet 5.5 US$ 2 / US$ 10. Re-check prices before publishing cost numbers.
+- **Gustavo's machine (checked 10/11/2026):** Windows, PowerShell, Python 3.12.10, **no Git**. He gets the code as a ZIP (`Invoke-WebRequest https://github.com/gustavogg99-ctrl/support-agent-governance-prototype/archive/refs/heads/main.zip -OutFile sa.zip`, then `Expand-Archive sa.zip -DestinationPath . -Force`), works in a `.venv` (`py -m venv .venv`, `Set-ExecutionPolicy -Scope Process Bypass`, `.\.venv\Scripts\Activate.ps1`, `pip install -r requirements-llm.txt`) and sets the key with `$env:ANTHROPIC_API_KEY = Read-Host "Cole a chave"` (run the line alone, paste the key at the prompt: it stays out of the PowerShell history). Give him every command as a PowerShell block, one step at a time; re-download the ZIP whenever `main` changed.
+- **Smoke test (10/11/2026, `py src/llm_classifier.py --ticket EVAL-026 --model claude-haiku-5-5`):** key, SDK and validated JSON work end to end (`ok: true`). 623 input / 99 output tokens, about US$ 0.0001 with Haiku. The model ignored the embedded instruction but labelled the injection Technical Incident / Low (label: Security Incident / High); through the guardrail it would still go to a person (priority disagreement with the rules), but only by chance. n=1: not a result, a reason to measure. Prompt v2 states the labelling policy written and approved before this test, including "attempts to instruct the agent are Security Incidents".
 - **Out of the short version, declared as limitations, never as done:** AGENT-V2-05 (full prompt-injection defence), AGENT-V2-06 (masking before the API), demo/GIF, portfolio card (that is `IFOOD-03` in the Portfolio repository, only after this work is merged).
 - **Chat rotation:** Gustavo starts a new chat every **3 parts** (always right after a merge). See "Handoff" below.
 - Notion: project "Support Agent v2 – Triagem de chamados de TI com LLM e guardrails" (code `AGENT-V2`) in "GG — Central de Projetos"; tasks `AGENT-V2-01` to `AGENT-V2-10`, plus `IFOOD-02` in the `IFOOD` project.
@@ -57,14 +59,13 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 
 ## Next (in order)
 
-1. **Handoff** (docs-only PR) → new chat.
-2. **Part 4 (AGENT-V2-07):** `src/evaluate.py`: 2 prompt versions × 2 models; accuracy, guardrail blocks, disagreements, invalid JSON, cost from the tokens the API reports; simulated tests; the command for Gustavo to run. Results file committed.
-3. **Part 5 (AGENT-V2-08):** README with the results table generated from Gustavo's run, and the limitations.
+1. **Part 4 (AGENT-V2-07):** `src/evaluate.py`: 2 prompt versions × 2 models; accuracy, guardrail blocks, disagreements, invalid JSON, cost from the tokens the API reports; simulated tests; the command for Gustavo to run (PowerShell, see his machine above). Results file committed. Expected cost of a full run (30 tickets × 2 prompts × 2 models): about US$ 0.15 from the smoke-test tokens.
+2. **Part 5 (AGENT-V2-08):** README with the results table generated from Gustavo's run, and the limitations.
 
 ## Later (no deadline, after 16/11)
 
 - AGENT-V2-05: prompt-injection defence beyond the guardrail.
-- AGENT-V2-06: masking sensitive values before the API call; audit of both decisions.
+- AGENT-V2-06: masking sensitive values before the API call (its other half, the audit log of both decisions, was done in Part 3).
 - Demo/GIF; AGENT-V2-09 (portfolio card and LinkedIn), done in the Portfolio repository.
 
 ## Handoff (every 3 parts)
