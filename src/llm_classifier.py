@@ -72,7 +72,8 @@ class LLMResponse:
 
 
 class LLMClient(Protocol):
-    def complete(self, *, model: str, system: str, user: str, schema: dict[str, Any]) -> LLMResponse:
+    def complete(self, *, model: str, system: str, user: str, schema: dict[str, Any] | None) -> LLMResponse:
+        """schema=None asks for plain text (used for reply drafts); otherwise JSON matching the schema."""
         ...
 
 
@@ -194,14 +195,17 @@ class AnthropicClient:
         self.effort = effort
         self.max_tokens = max_tokens
 
-    def complete(self, *, model: str, system: str, user: str, schema: dict[str, Any]) -> LLMResponse:
+    def complete(self, *, model: str, system: str, user: str, schema: dict[str, Any] | None) -> LLMResponse:
+        output_config: dict[str, Any] = {"effort": self.effort}
+        if schema is not None:
+            output_config["format"] = {"type": "json_schema", "schema": schema}
         try:
             response = self._client.messages.create(
                 model=model,
                 max_tokens=self.max_tokens,
                 system=system,
                 messages=[{"role": "user", "content": user}],
-                output_config={"effort": self.effort, "format": {"type": "json_schema", "schema": schema}},
+                output_config=output_config,
             )
         except self._anthropic.APIError as error:
             raise LLMError(type(error).__name__) from error

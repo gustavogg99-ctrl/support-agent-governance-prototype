@@ -83,7 +83,8 @@ support-agent-governance-prototype/
 ├── data/
 │   └── eval_tickets.jsonl
 ├── prompts/
-│   └── classify_v1.md
+│   ├── classify_v1.md
+│   └── reply_v1.md
 ├── assets/
 │   ├── architecture-diagram.drawio
 │   └── architecture-diagram.png
@@ -91,6 +92,7 @@ support-agent-governance-prototype/
 │   ├── architecture.md
 │   ├── decision-logic.md
 │   ├── evaluation-set.md
+│   ├── guardrail.md
 │   ├── governance-controls.md
 │   ├── implementation-roadmap.md
 │   ├── llm-classifier.md
@@ -98,10 +100,12 @@ support-agent-governance-prototype/
 │   ├── ROADMAP.md
 │   └── sample-interactions.md
 ├── src/
+│   ├── agent.py
 │   ├── eval_set.py
 │   ├── llm_classifier.py
 │   └── prototype.py
 └── tests/
+    ├── test_agent.py
     ├── test_eval_set.py
     ├── test_llm_classifier.py
     └── test_prototype.py
@@ -255,7 +259,8 @@ Additional documentation is available in the `docs/` folder:
 - `docs/sample-interactions.md` — example prototype interactions;
 - `docs/implementation-roadmap.md` — future implementation roadmap;
 - `docs/evaluation-set.md` — labelled evaluation set and rules-only baseline;
-- `docs/llm-classifier.md` — LLM classification with validated JSON output (not yet wired into the decision flow);
+- `docs/llm-classifier.md` — LLM classification with validated JSON output;
+- `docs/guardrail.md` — rules as guardrail over the LLM, reply draft checks and human approval (`src/agent.py`);
 - `docs/ROADMAP.md` — current status of the LLM version (v2).
 
 ---

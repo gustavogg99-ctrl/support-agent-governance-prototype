@@ -6,3 +6,6 @@ __pycache__/
 *.pyc
 # Local secrets (never commit an API key)
 .env
+
+# Runtime log of the LLM agent (src/agent.py)
+agent_audit_log.jsonl
