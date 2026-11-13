@@ -219,26 +219,33 @@ class AnthropicClient:
         )
 
 
-def main(arguments: list[str] | None = None) -> int:
+def open_cli_session(ticket_id: str) -> tuple[Any, AnthropicClient] | None:
+    """For the command lines: the evaluation ticket and a real client, or None after printing why not."""
     from eval_set import load_eval_set
 
+    items = {item.ticket.ticket_id: item for item in load_eval_set()}
+    item = items.get(ticket_id.strip().upper())
+    if item is None:
+        print(f"Ticket {ticket_id!r} is not in the evaluation set.")
+        return None
+    try:
+        return item, AnthropicClient()
+    except LLMError as error:
+        print(f"Cannot call the API: {error}")
+        return None
+
+
+def main(arguments: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Classify one evaluation ticket with Claude.")
     parser.add_argument("--ticket", required=True, help="evaluation ticket ID, e.g. EVAL-026")
     parser.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
     parser.add_argument("--prompt", default=DEFAULT_PROMPT_VERSION, help="prompt version, e.g. v1")
     args = parser.parse_args(arguments)
 
-    items = {item.ticket.ticket_id: item for item in load_eval_set()}
-    item = items.get(args.ticket.strip().upper())
-    if item is None:
-        print(f"Ticket {args.ticket!r} is not in the evaluation set.")
+    session = open_cli_session(args.ticket)
+    if session is None:
         return 2
-
-    try:
-        client = AnthropicClient()
-    except LLMError as error:
-        print(f"Cannot call the API: {error}")
-        return 2
+    item, client = session
 
     result = classify(item.ticket, client, model=args.model, prompt_version=args.prompt)
     print(json.dumps(

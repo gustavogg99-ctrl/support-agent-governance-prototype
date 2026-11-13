@@ -51,6 +51,7 @@ from llm_classifier import (  # noqa: E402
     LLMClient,
     LLMError,
     classify,
+    open_cli_session,
 )
 
 AGENT_AUDIT_LOG_FILE = p.PROJECT_ROOT / "agent_audit_log.jsonl"
@@ -183,7 +184,7 @@ class Outcome:
     sent_text: str | None
 
 
-def request_approval(decision: TriageDecision, draft: Draft, ask: Callable[[str], str]) -> Outcome:
+def request_approval(draft: Draft, ask: Callable[[str], str]) -> Outcome:
     """A person approves a draft before it is 'sent'. Anything but an explicit yes is a rejection."""
     if not draft.ok:
         return Outcome(status="handoff_to_analyst", sent_text=None)
@@ -247,32 +248,23 @@ def run(
     show("  Draft:" if draft.ok else f"  No draft ({draft.error}). Message to requester:")
     show(f"    {draft.text}")
 
-    outcome = request_approval(decision, draft, ask)
+    outcome = request_approval(draft, ask)
     show(f"  Outcome: {outcome.status}")
     write_agent_audit_log(ticket, decision, draft, outcome)
     return outcome
 
 
 def main(arguments: list[str] | None = None) -> int:
-    from eval_set import load_eval_set
-    from llm_classifier import AnthropicClient
-
     parser = argparse.ArgumentParser(description="Triage one evaluation ticket with rules + Claude + human approval.")
     parser.add_argument("--ticket", required=True, help="evaluation ticket ID, e.g. EVAL-005")
     parser.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
     parser.add_argument("--prompt", default=DEFAULT_PROMPT_VERSION, help="classification prompt version")
     args = parser.parse_args(arguments)
 
-    items = {item.ticket.ticket_id: item for item in load_eval_set()}
-    item = items.get(args.ticket.strip().upper())
-    if item is None:
-        print(f"Ticket {args.ticket!r} is not in the evaluation set.")
+    session = open_cli_session(args.ticket)
+    if session is None:
         return 2
-    try:
-        client = AnthropicClient()
-    except LLMError as error:
-        print(f"Cannot call the API: {error}")
-        return 2
+    item, client = session
 
     run(item.ticket, client, ask=input, model=args.model, prompt_version=args.prompt)
     print(f"Audit log: {AGENT_AUDIT_LOG_FILE}")
