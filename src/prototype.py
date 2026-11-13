@@ -1,22 +1,14 @@
 """
-Support Agent Governance Prototype
+Deterministic rules for IT support ticket triage: the guardrail of this project.
 
-This file implements a local Python prototype for simulated IT support ticket triage.
+Each simulated ticket goes through sensitive-data detection, classification,
+priority, escalation and automation rules (docs/decision-logic.md), gets a
+fixed-template response and one redacted line in a local audit log.
 
-Prototype scope:
-- Simulate support tickets
-- Classify tickets
-- Assign priority
-- Detect simple sensitive data patterns
-- Decide whether automation is allowed or blocked
-- Decide whether human escalation is required
-- Generate safe automated responses
-- Create a local audit log
+Nothing here touches a real system: no password is reset, no access is granted
+and no incident is closed.
 
-Important:
-This is not a production system.
-It does not connect to real systems.
-It does not perform real password resets, approvals, access changes, or incident actions.
+    py src/prototype.py [--list | --ticket TCK-009]
 """
 
 from __future__ import annotations
@@ -87,7 +79,7 @@ SAMPLE_TICKETS = [
         subject="Issue with invoice",
         description="My CPF is 123.456.789-00 and I need help with an invoice problem.",
     ),
-        Ticket(
+    Ticket(
         ticket_id="TCK-006",
         user="Rafael Mendes",
         subject="VPN connection issue",
@@ -149,47 +141,27 @@ def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
     return bool(detected_types), detected_types
 
 
+# Checked in order: the first category with a matching keyword wins, so
+# security comes before everything else.
+CATEGORY_KEYWORDS = (
+    ("Security Incident", (
+        "phishing", "suspicious", "malware", "security", "breach", "exposed password",
+        "my password is", "minha senha é", "credential", "credentials", "compromised",
+    )),
+    ("Access Request", ("grant access", "request access", "permission", "shared folder", "restricted folder")),
+    ("Access Support", ("password reset", "forgot my password", "senha", "login", "access issue", "cannot access")),
+    ("Service Request", ("invoice", "question", "information", "how to", "request")),
+    ("Technical Incident", ("slow", "error", "crash", "not working", "issue", "problem", "vpn", "unavailable", "down")),
+)
+URGENT_KEYWORDS = ("urgent", "immediately", "critical", "cannot work", "business stopped")
+
+
 def classify_ticket(subject: str, description: str) -> str:
-    """
-    Classify a ticket into a simulated ITSM category.
-
-    The order matters:
-    - Security incidents must be identified first.
-    - Access requests must be separated from access support.
-    - Service requests should be identified before generic technical issues.
-    """
-
+    """Keyword match on subject and description. A ticket that matches nothing is General Support."""
     text = f"{subject} {description}".lower()
-
-    security_keywords = [
-        "phishing",
-        "suspicious",
-        "malware",
-        "security",
-        "breach",
-        "exposed password",
-        "my password is",
-        "minha senha é",
-        "credential",
-        "credentials",
-        "compromised",
-    ]
-
-    if any(keyword in text for keyword in security_keywords):
-        return "Security Incident"
-
-    if any(keyword in text for keyword in ["grant access", "request access", "permission", "shared folder", "restricted folder"]):
-        return "Access Request"
-
-    if any(keyword in text for keyword in ["password reset", "forgot my password", "senha", "login", "access issue", "cannot access"]):
-        return "Access Support"
-
-    if any(keyword in text for keyword in ["invoice", "question", "information", "how to", "request"]):
-        return "Service Request"
-
-    if any(keyword in text for keyword in ["slow", "error", "crash", "not working", "issue", "problem", "vpn", "unavailable", "down"]):
-        return "Technical Incident"
-
+    for category, keywords in CATEGORY_KEYWORDS:
+        if any(keyword in text for keyword in keywords):
+            return category
     return "General Support"
 
 
@@ -199,30 +171,12 @@ def assign_priority(
     subject: str,
     description: str,
 ) -> str:
-    """
-    Assign priority based on category, sensitive data, and urgency indicators.
-    """
-
     text = f"{subject} {description}".lower()
 
-    urgent_keywords = ["urgent", "immediately", "critical", "cannot work", "business stopped"]
-    urgent = any(keyword in text for keyword in urgent_keywords)
-
-    if category == "Security Incident":
+    if category == "Security Incident" or sensitive_data_detected or any(k in text for k in URGENT_KEYWORDS):
         return "High"
-
-    if sensitive_data_detected:
-        return "High"
-
-    if urgent:
-        return "High"
-
-    if category == "Access Request":
+    if category in ("Access Request", "Technical Incident", "Access Support"):
         return "Medium"
-
-    if category in ["Technical Incident", "Access Support"]:
-        return "Medium"
-
     return "Low"
 
 
@@ -231,10 +185,7 @@ def evaluate_escalation(
     priority: str,
     sensitive_data_detected: bool,
 ) -> tuple[bool, str]:
-    """
-    Decide whether the ticket must be escalated to a human.
-    """
-
+    """Whether a person must review the ticket, and the reason that goes to the audit log."""
     if category == "Security Incident":
         return True, "Security-related tickets require human review."
 
@@ -258,16 +209,8 @@ def evaluate_automation(
     sensitive_data_detected: bool,
     human_escalation_required: bool,
 ) -> tuple[bool, str]:
-    """
-    Decide whether automation is allowed.
-
-    In this prototype, automation means generating a safe response only.
-    It never means performing real actions in real systems.
-    """
-
-    blocked_categories = ["Security Incident", "Access Request"]
-
-    if category in blocked_categories:
+    """Whether an automated response is allowed. Automation only ever means a templated reply."""
+    if category in ("Security Incident", "Access Request"):
         return False, "Automation is blocked for this category."
 
     if sensitive_data_detected:
@@ -284,15 +227,8 @@ def generate_safe_response(
     category: str,
     priority: str,
     automation_allowed: bool,
-    human_escalation_required: bool,
 ) -> str:
-    """
-    Generate a safe automated response.
-
-    The response avoids exposing sensitive details and does not claim that
-    real system actions were performed.
-    """
-
+    """A fixed template. It never claims that an action was performed in a real system."""
     if not automation_allowed:
         return (
             f"Hello {ticket.user}, your request has been received and classified as "
@@ -378,12 +314,7 @@ def redact_text(text: str) -> str:
 
 
 def write_audit_log(ticket: Ticket, analysis: TicketAnalysis) -> None:
-    """
-    Write a local audit log entry in JSON Lines format.
-
-    The log is stored locally and uses redacted ticket text.
-    """
-
+    """Append one JSON line to the local audit log, with the ticket text redacted."""
     log_entry: dict[str, Any] = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "ticket": {
@@ -400,62 +331,28 @@ def write_audit_log(ticket: Ticket, analysis: TicketAnalysis) -> None:
 
 
 def analyze_ticket(ticket: Ticket) -> TicketAnalysis:
-    """
-    Run the full ticket analysis flow.
-    """
-
-    combined_text = f"{ticket.subject} {ticket.description}"
-
-    sensitive_data_detected, sensitive_data_types = detect_sensitive_data(combined_text)
-
+    """Run every rule on one ticket. Sensitive data comes first: priority, escalation and automation depend on it."""
+    sensitive, sensitive_types = detect_sensitive_data(f"{ticket.subject} {ticket.description}")
     category = classify_ticket(ticket.subject, ticket.description)
-
-    priority = assign_priority(
-        category=category,
-        sensitive_data_detected=sensitive_data_detected,
-        subject=ticket.subject,
-        description=ticket.description,
-    )
-
-    human_escalation_required, escalation_reason = evaluate_escalation(
-        category=category,
-        priority=priority,
-        sensitive_data_detected=sensitive_data_detected,
-    )
-
-    automation_allowed, automation_decision_reason = evaluate_automation(
-        category=category,
-        sensitive_data_detected=sensitive_data_detected,
-        human_escalation_required=human_escalation_required,
-    )
-
-    automated_response = generate_safe_response(
-        ticket=ticket,
-        category=category,
-        priority=priority,
-        automation_allowed=automation_allowed,
-        human_escalation_required=human_escalation_required,
-    )
+    priority = assign_priority(category, sensitive, ticket.subject, ticket.description)
+    escalate, escalation_reason = evaluate_escalation(category, priority, sensitive)
+    automate, automation_reason = evaluate_automation(category, sensitive, escalate)
 
     return TicketAnalysis(
         ticket_id=ticket.ticket_id,
         category=category,
         priority=priority,
-        sensitive_data_detected=sensitive_data_detected,
-        sensitive_data_types=sensitive_data_types,
-        human_escalation_required=human_escalation_required,
+        sensitive_data_detected=sensitive,
+        sensitive_data_types=sensitive_types,
+        human_escalation_required=escalate,
         escalation_reason=escalation_reason,
-        automation_allowed=automation_allowed,
-        automation_decision_reason=automation_decision_reason,
-        automated_response=automated_response,
+        automation_allowed=automate,
+        automation_decision_reason=automation_reason,
+        automated_response=generate_safe_response(ticket, category, priority, automate),
     )
 
 
 def print_analysis(ticket: Ticket, analysis: TicketAnalysis) -> None:
-    """
-    Print the ticket analysis result to the terminal.
-    """
-
     print("=" * 80)
     print(f"Ticket ID: {ticket.ticket_id}")
     print(f"User: {ticket.user}")
@@ -475,33 +372,23 @@ def print_analysis(ticket: Ticket, analysis: TicketAnalysis) -> None:
     print("=" * 80)
     print()
 
-def print_execution_summary(analyses: list[TicketAnalysis]) -> None:
-    """
-    Print an execution summary for the local prototype run.
-    """
 
-    total_tickets = len(analyses)
-    escalated_tickets = sum(1 for analysis in analyses if analysis.human_escalation_required)
-    automation_allowed = sum(1 for analysis in analyses if analysis.automation_allowed)
-    automation_blocked = total_tickets - automation_allowed
-    sensitive_data_cases = sum(1 for analysis in analyses if analysis.sensitive_data_detected)
+def print_execution_summary(analyses: list[TicketAnalysis]) -> None:
+    allowed = sum(analysis.automation_allowed for analysis in analyses)
 
     print("=" * 80)
     print("Execution Summary")
     print("-" * 80)
-    print(f"Total tickets processed: {total_tickets}")
-    print(f"Human escalation required: {escalated_tickets}")
-    print(f"Automation allowed: {automation_allowed}")
-    print(f"Automation blocked: {automation_blocked}")
-    print(f"Sensitive data cases: {sensitive_data_cases}")
+    print(f"Total tickets processed: {len(analyses)}")
+    print(f"Human escalation required: {sum(analysis.human_escalation_required for analysis in analyses)}")
+    print(f"Automation allowed: {allowed}")
+    print(f"Automation blocked: {len(analyses) - allowed}")
+    print(f"Sensitive data cases: {sum(analysis.sensitive_data_detected for analysis in analyses)}")
     print("=" * 80)
     print()
 
-def list_sample_tickets(tickets: list[Ticket]) -> None:
-    """
-    List available simulated tickets.
-    """
 
+def list_sample_tickets(tickets: list[Ticket]) -> None:
     print("Available simulated tickets:")
     print("-" * 80)
 
@@ -512,29 +399,17 @@ def list_sample_tickets(tickets: list[Ticket]) -> None:
 
 
 def find_ticket_by_id(ticket_id: str, tickets: list[Ticket]) -> Ticket | None:
-    """
-    Find a simulated ticket by ticket ID.
-    """
-
-    normalized_ticket_id = ticket_id.strip().upper()
-
-    for ticket in tickets:
-        if ticket.ticket_id.upper() == normalized_ticket_id:
-            return ticket
-
-    return None
+    wanted = ticket_id.strip().upper()
+    return next((ticket for ticket in tickets if ticket.ticket_id.upper() == wanted), None)
 
 
 def select_tickets_from_arguments(arguments: list[str]) -> list[Ticket] | None:
     """
-    Select tickets based on simple command-line arguments.
+    The tickets to process, or None when there is nothing to run.
 
-    Supported commands:
-    - No argument: run all simulated tickets
-    - --list: list available tickets
-    - --ticket TCK-001: run one specific ticket
+    No argument runs every sample ticket, --list prints them and
+    --ticket TCK-001 runs one.
     """
-
     if not arguments:
         return SAMPLE_TICKETS
 
@@ -567,11 +442,8 @@ def select_tickets_from_arguments(arguments: list[str]) -> list[Ticket] | None:
 
     return None
 
-def main() -> None:
-    """
-    Execute the local prototype using simulated tickets.
-    """
 
+def main() -> None:
     print("Support Agent Governance Prototype")
 
     tickets_to_process = select_tickets_from_arguments(sys.argv[1:])
