@@ -185,6 +185,21 @@ class HumanApproval(unittest.TestCase):
         self.assertTrue(entry["final_decision"]["human_review"])
         self.assertEqual(entry["human_outcome"], "handoff_to_analyst")
 
+    def test_audit_log_redacts_what_the_llm_wrote(self) -> None:
+        """The model can repeat a value from the ticket in its reason, or in an answer that gets rejected."""
+        cpf = "123.456.789-00"  # disclosed in TCK-005
+        answers = {
+            "accepted": json.dumps({"category": "Service Request", "priority": "High", "sensitive_data": True,
+                                    "reason": f"The requester discloses the CPF {cpf}."}),
+            "rejected": classification_json(f"CPF {cpf}", "High", True),
+        }
+        for name, answer in answers.items():
+            with self.subTest(answer=name):
+                self.run_ticket("TCK-005", answer, "yes")
+                raw = self.log.read_text(encoding="utf-8")
+                self.log.unlink()
+                self.assertNotIn(cpf, raw)
+
 
 if __name__ == "__main__":
     unittest.main()
