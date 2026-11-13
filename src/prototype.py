@@ -120,31 +120,27 @@ SAMPLE_TICKETS = [
 ]
 
 
+# One table for detection and for redaction, so the two cannot drift apart.
+# Redaction applies them in this order: a CPF is also a run of digits.
+PERSONAL_DATA_PATTERNS = {
+    "email": (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "[REDACTED_EMAIL]"),
+    "cpf": (r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b", "[REDACTED_CPF]"),
+    "phone": (r"\b(?:\+55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b", "[REDACTED_PHONE]"),
+    "credit_card_like_number": (r"\b(?:\d[ -]*?){13,16}\b", "[REDACTED_NUMBER]"),
+}
+SECRET_DISCLOSURE = r"\b(my password is|minha senha é|token is|secret is)"
+
+
 def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
     """
-    Detect simple sensitive data patterns.
+    Detect values a ticket should not carry: personal data and disclosed secrets.
 
-    This prototype detects explicit sensitive data values, such as CPF,
-    email addresses, phone numbers, and card-like numbers.
-
-    It does not treat the word "password" alone as sensitive data.
-    A password reset request is sensitive from an operational perspective,
-    but it is not the same as the user exposing an actual secret.
+    The word "password" alone is not sensitive data. Asking for a password
+    reset is not the same as writing the password in the ticket.
     """
-
-    patterns = {
-        "email": r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-        "cpf": r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b",
-        "phone": r"\b(?:\+55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b",
-        "credit_card_like_number": r"\b(?:\d[ -]*?){13,16}\b",
-        "exposed_secret": r"\b(my password is|minha senha é|token is|secret is|my token is)\b",
-    }
-
-    detected_types: list[str] = []
-
-    for data_type, pattern in patterns.items():
-        if re.search(pattern, text, flags=re.IGNORECASE):
-            detected_types.append(data_type)
+    detected_types = [name for name, (pattern, _) in PERSONAL_DATA_PATTERNS.items() if re.search(pattern, text)]
+    if re.search(SECRET_DISCLOSURE + r"\b", text, flags=re.IGNORECASE):
+        detected_types.append("exposed_secret")
 
     return bool(detected_types), detected_types
 
@@ -327,54 +323,12 @@ def generate_safe_response(
 
 
 def redact_text(text: str) -> str:
-    """
-    Redact basic sensitive data from audit logs.
-
-    This prototype redacts common sensitive data patterns before writing
-    ticket subject and description fields to the local audit log.
-    """
-
-    redacted = text
-
-    redacted = re.sub(
-        r"\b(my password is|minha senha é|token is|secret is|my token is)\s*:?\s*\S+",
-        r"\1 [REDACTED_SECRET]",
-        redacted,
-        flags=re.IGNORECASE,
-    )
-
-    redacted = re.sub(
-        r"\b(password|senha|token|secret)\s*[:=]\s*\S+",
-        r"\1=[REDACTED_SECRET]",
-        redacted,
-        flags=re.IGNORECASE,
-    )
-
-    redacted = re.sub(
-        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-        "[REDACTED_EMAIL]",
-        redacted,
-    )
-
-    redacted = re.sub(
-        r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b",
-        "[REDACTED_CPF]",
-        redacted,
-    )
-
-    redacted = re.sub(
-        r"\b(?:\+55\s?)?(?:\(?\d{2}\)?\s?)?\d{4,5}-?\d{4}\b",
-        "[REDACTED_PHONE]",
-        redacted,
-    )
-
-    redacted = re.sub(
-        r"\b(?:\d[ -]*?){13,16}\b",
-        "[REDACTED_NUMBER]",
-        redacted,
-    )
-
-    return redacted
+    """Replace disclosed secrets and personal data with placeholders before text is written to a log."""
+    text = re.sub(SECRET_DISCLOSURE + r"\s*:?\s*\S+", r"\1 [REDACTED_SECRET]", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(password|senha|token|secret)\s*[:=]\s*\S+", r"\1=[REDACTED_SECRET]", text, flags=re.IGNORECASE)
+    for pattern, placeholder in PERSONAL_DATA_PATTERNS.values():
+        text = re.sub(pattern, placeholder, text)
+    return text
 
 
 def write_audit_log(ticket: Ticket, analysis: TicketAnalysis) -> None:
