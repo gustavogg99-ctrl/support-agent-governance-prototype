@@ -143,6 +143,18 @@ class Request(unittest.TestCase):
             c.load_prompt("v999")
 
 
+class StubAPIError(Exception):
+    """Stands in for anthropic.APIError."""
+
+
+def client_with_stubbed_sdk(messages: object) -> c.AnthropicClient:
+    """The real client over a stub of the SDK: no network and no key."""
+    stub = mock.Mock(APIError=StubAPIError, Anthropic=lambda: mock.Mock(messages=messages))
+    with mock.patch.dict(sys.modules, {"anthropic": stub}), \
+            mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-placeholder"}):
+        return c.AnthropicClient()
+
+
 class RealClientGuards(unittest.TestCase):
     def test_missing_api_key_fails_before_any_call(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -160,9 +172,6 @@ class RealClientGuards(unittest.TestCase):
         """The SDK is replaced by a stub: checks the request shape without network or key."""
         sent: dict = {}
 
-        class APIError(Exception):
-            pass
-
         class Block:
             def __init__(self, type_: str, text: str = "") -> None:
                 self.type, self.text = type_, text
@@ -176,10 +185,7 @@ class RealClientGuards(unittest.TestCase):
                     stop_reason="end_turn",
                 )
 
-        stub = mock.Mock(APIError=APIError, Anthropic=lambda: mock.Mock(messages=Messages()))
-        with mock.patch.dict(sys.modules, {"anthropic": stub}), \
-                mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-placeholder"}):
-            result = c.classify(TICKET, c.AnthropicClient(), model="claude-haiku-5-5")
+        result = c.classify(TICKET, client_with_stubbed_sdk(Messages()), model="claude-haiku-5-5")
 
         self.assertTrue(result.ok)
         self.assertEqual((result.input_tokens, result.output_tokens), (300, 90))
@@ -190,20 +196,14 @@ class RealClientGuards(unittest.TestCase):
 
     def test_sdk_error_becomes_a_failed_classification(self) -> None:
         """Network, authentication and rate-limit errors reach the guardrail as ok=False, not as an exception."""
-        class APIError(Exception):
-            pass
-
-        class RateLimitError(APIError):
+        class RateLimitError(StubAPIError):
             pass
 
         class Messages:
             def create(self, **kwargs):
                 raise RateLimitError("429")
 
-        stub = mock.Mock(APIError=APIError, Anthropic=lambda: mock.Mock(messages=Messages()))
-        with mock.patch.dict(sys.modules, {"anthropic": stub}), \
-                mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-placeholder"}):
-            result = c.classify(TICKET, c.AnthropicClient())
+        result = c.classify(TICKET, client_with_stubbed_sdk(Messages()))
 
         self.assertFalse(result.ok)
         self.assertEqual(result.error, "api error: RateLimitError")
