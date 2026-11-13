@@ -79,8 +79,8 @@ class Metrics(unittest.TestCase):
         """The guardrail is conservative: a disagreement with the rules costs a human review, even if the LLM is right."""
         rows = ev.evaluate_combination(ITEMS, OracleClient(), "claude-haiku-5-5", "v1")
         s = ev.summarize(rows, "claude-haiku-5-5")
-        self.assertGreater(s["disagreements"], 0)
-        self.assertGreater(s["unnecessary_review"], 0)
+        self.assertEqual(s["disagreements"], 21)
+        self.assertEqual(s["unnecessary_review"], 4)
 
     def test_guardrail_catches_what_a_naive_llm_alone_would_automate(self) -> None:
         """A classifier that calls everything a low service request: 21 tickets need a person, the rules catch all but 3."""

@@ -84,7 +84,9 @@ class InvalidOutputGoesToAPerson(unittest.TestCase):
             "not an object": "[]",
             "unknown category": reply(category="Hardware"),
             "unknown priority": reply(priority="P1"),
+            "category not a string": reply(category=3),
             "sensitive_data not boolean": reply(sensitive_data="no"),
+            "reason not a string": reply(reason=["a", "b"]),
             "extra key": reply(automation_allowed=True),
             "missing key": json.dumps({"category": "Technical Incident", "priority": "Low", "sensitive_data": False}),
         }
@@ -185,6 +187,39 @@ class RealClientGuards(unittest.TestCase):
         self.assertEqual(sent["output_config"]["effort"], "low")
         self.assertEqual(sent["output_config"]["format"], {"type": "json_schema", "schema": c.OUTPUT_SCHEMA})
         self.assertEqual(sent["messages"][0]["role"], "user")
+
+    def test_sdk_error_becomes_a_failed_classification(self) -> None:
+        """Network, authentication and rate-limit errors reach the guardrail as ok=False, not as an exception."""
+        class APIError(Exception):
+            pass
+
+        class RateLimitError(APIError):
+            pass
+
+        class Messages:
+            def create(self, **kwargs):
+                raise RateLimitError("429")
+
+        stub = mock.Mock(APIError=APIError, Anthropic=lambda: mock.Mock(messages=Messages()))
+        with mock.patch.dict(sys.modules, {"anthropic": stub}), \
+                mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-placeholder"}):
+            result = c.classify(TICKET, c.AnthropicClient())
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error, "api error: RateLimitError")
+
+    def test_missing_sdk_is_explained(self) -> None:
+        with mock.patch.dict(sys.modules, {"anthropic": None}), \
+                mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-placeholder"}):
+            with self.assertRaisesRegex(c.LLMError, "requirements-llm.txt"):
+                c.AnthropicClient()
+
+    def test_command_line_rejects_a_ticket_outside_the_evaluation_set(self) -> None:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = c.main(["--ticket", "EVAL-999"])
+        self.assertEqual(code, 2)
+        self.assertIn("not in the evaluation set", out.getvalue())
 
     def test_sdk_is_not_imported_by_the_core(self) -> None:
         c.classify(TICKET, ScriptedClient(reply()))

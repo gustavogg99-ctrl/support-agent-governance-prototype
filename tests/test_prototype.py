@@ -100,6 +100,19 @@ class Classification(unittest.TestCase):
     def test_unmatched_text_is_general_support(self) -> None:
         self.assertEqual(p.classify_ticket("Hello", "Good morning team"), "General Support")
 
+    def test_earlier_category_wins_whichever_field_holds_the_keyword(self) -> None:
+        """The order of docs/decision-logic.md, section 4: each pair mixes a keyword with one of the next category."""
+        cases = (
+            ("phishing", "grant access", "Security Incident"),
+            ("grant access", "forgot my password", "Access Request"),
+            ("login", "invoice", "Access Support"),
+            ("how to", "slow", "Service Request"),
+        )
+        for first, second, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(p.classify_ticket(first, second), expected)
+                self.assertEqual(p.classify_ticket(second, first), expected)
+
 
 class GovernanceRules(unittest.TestCase):
     def test_security_and_access_requests_always_escalate_and_block_automation(self) -> None:
@@ -154,6 +167,12 @@ class Redaction(unittest.TestCase):
     def test_redacts_key_value_secrets(self) -> None:
         self.assertEqual(p.redact_text("token=abc123"), "token=[REDACTED_SECRET]")
 
+    def test_text_without_sensitive_values_is_left_alone(self) -> None:
+        for sample in p.SAMPLE_TICKETS:
+            if not p.detect_sensitive_data(sample.description)[0]:
+                with self.subTest(ticket=sample.ticket_id):
+                    self.assertEqual(p.redact_text(sample.description), sample.description)
+
 
 class AuditLog(unittest.TestCase):
     def test_log_entries_are_redacted_json_lines(self) -> None:
@@ -200,6 +219,31 @@ class CommandLine(unittest.TestCase):
         selected, output = self.run_args(["--list"])
         self.assertIsNone(selected)
         self.assertIn("TCK-010", output)
+
+    def test_bad_arguments_run_nothing_and_say_what_is_accepted(self) -> None:
+        for args, message in ((["--ticket"], "Missing ticket ID."), (["--everything"], "Unknown argument: --everything")):
+            with self.subTest(args=args):
+                selected, output = self.run_args(args)
+                self.assertIsNone(selected)
+                self.assertIn(message, output)
+                self.assertIn("py src/prototype.py --ticket TCK-009", output)
+
+    def test_full_run_prints_the_summary_published_in_the_readme_and_logs_every_ticket(self) -> None:
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "audit_log.jsonl"
+            with mock.patch.object(p, "AUDIT_LOG_FILE", log_path), mock.patch.object(sys, "argv", ["prototype.py"]), \
+                    redirect_stdout(out):
+                p.main()
+            logged = log_path.read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(len(logged), 10)
+        lines = out.getvalue().splitlines()
+        start = lines.index("Total tickets processed: 10")
+        summary = "\n".join(lines[start:start + 5])
+        self.assertEqual(summary.splitlines()[-1], "Sensitive data cases: 3")
+        readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+        self.assertIn(summary, readme)
 
 
 if __name__ == "__main__":
