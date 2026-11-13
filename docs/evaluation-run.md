@@ -1,4 +1,4 @@
-# Evaluation Run (AGENT-V2-07)
+# Evaluation Run
 
 `src/evaluate.py` measures the LLM triage against the 30 labelled tickets of `docs/evaluation-set.md`. It compares **two prompt versions** and **two models** (four combinations, 120 API calls), each run through the full guardrail of `src/agent.py` (rules + LLM, see `docs/guardrail.md`).
 
@@ -91,5 +91,5 @@ No prompt v3 is derived from these failures: tuning to the evaluation set would 
 - **30 tickets.** One ticket is 3.3 percentage points. Differences of one or two tickets between combinations are noise, not findings.
 - **One run.** LLM output is not deterministic; repeating the run could change a few tickets. Variance is not measured.
 - **Synthetic data**, with labels drafted with AI assistance and approved by one reviewer (the project owner), and prompt `v2` written from the same policy that produced the labels. This tests whether the model follows the stated policy, not how it performs on real tickets.
-- **Classification only.** Reply drafts, latency and robustness against injection beyond these five tickets are not measured (AGENT-V2-05 and AGENT-V2-06 are out of this scope).
+- **Classification only.** Reply drafts, latency and robustness against injection beyond these five tickets are not measured. A fuller injection defence and masking before the API call are not implemented.
 - **Prices** are those stored in the results file, checked on the date it records. Re-check before publishing a cost number.

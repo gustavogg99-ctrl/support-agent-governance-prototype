@@ -1,228 +1,43 @@
 # Support Agent Governance Prototype
 
-A local Python prototype of the governance layer for an AI support agent in corporate IT service management scenarios.
+An IT support ticket triage agent in which an LLM classifies each ticket and a set of deterministic rules decides what may be done with that classification. The rules can only make the outcome stricter, any disagreement between the rules and the LLM goes to a person, and a person approves every reply. Nothing is actually sent: there is no mail or ticketing integration.
 
-> **Current scope:** a deterministic rules layer plus an LLM triage agent built on top of it. The LLM (Claude, through the Anthropic API) classifies each ticket; the rules act as a guardrail that the LLM can only make stricter; a person approves every reply; nothing is actually sent. The rules, the guardrail and the evaluation harness are covered by an automated test suite (standard library only) that runs in CI on every push and never calls the API. Measured results on a labelled set of 30 synthetic tickets, and their limits, are in section 8.
+The project measures that design instead of asserting it. On 30 labelled synthetic tickets, with prompt `v2`, no ticket that needed a person received an automated reply (0 of 21). The rules alone let 8 of 21 through, and the LLM without the rules would have let 1 through. The cost is that 4 tickets that could have been automated went to a person. The full table and its limits are under [Results](#results).
 
-The project focuses on ticket triage, request classification, incident prioritization, human escalation rules, safe automated responses, sensitive data detection, and audit logging.
+It runs on Python 3.10 or higher. The rules, the tests and the results table use the standard library only; the `anthropic` SDK is needed only to call the real API. The test suite runs in CI on every push and never calls the API.
 
----
+## How it works
 
-## 1. Project Overview
-
-The prototype simulates a support environment where incoming tickets are processed by a deterministic, rule-based workflow. These rules are the controls an AI support agent would have to operate within.
-
-The prototype evaluates each ticket and decides whether the request can receive a safe automated response or must be escalated to a human analyst.
-
-The LLM version (section 8) keeps those rules as the guardrail: the LLM may make a decision more cautious, never less, and any disagreement between the rules and the LLM goes to a person.
-
-The main goal is not to build a production-ready chatbot, but to demonstrate how automation logic can be designed with governance, auditability, escalation boundaries, and responsible AI controls.
-
----
-
-## 2. Problem Statement
-
-Support teams often receive a high volume of repetitive requests, operational incidents, access issues, and user-reported problems.
-
-Without clear triage and escalation rules, organizations may face:
-
-- inconsistent ticket prioritization;
-- delayed incident response;
-- excessive manual work;
-- unsafe automation of sensitive requests;
-- lack of auditability;
-- poor visibility over escalation decisions.
-
-This prototype addresses these problems by simulating a structured decision workflow for automated support triage.
-
----
-
-## 3. Objectives
-
-The project demonstrates how the governance layer of an AI support agent can:
-
-- classify support tickets into predefined categories;
-- assign priority levels based on ticket content and risk;
-- detect simple sensitive data patterns;
-- decide whether automation is allowed or blocked;
-- escalate high-risk or sensitive tickets to human review;
-- generate safe automated responses;
-- create a local audit log with sensitive data redaction;
-- provide command-line options for reviewing and processing sample tickets.
-
----
-
-## 4. Key Features
-
-The current prototype includes:
-
-- simulated ticket input;
-- ticket classification;
-- priority assignment;
-- simple sensitive data detection;
-- human escalation rules;
-- separation between allowed and blocked automation;
-- safe automated response generation;
-- local audit log generation;
-- sensitive data redaction in logs;
-- command-line execution;
-- ticket listing with `--list`;
-- individual ticket processing with `--ticket TCK-XXX`;
-- invalid ticket validation;
-- LLM classification with JSON validated locally (any invalid answer goes to a person);
-- a guardrail that combines the rules and the LLM, an LLM reply draft that is checked before a person sees it, explicit human approval and an audit log of both decisions;
-- a labelled evaluation set and a harness that compares prompt versions and models, with cost from the tokens the API reports.
-
----
-
-## 5. Repository Structure
-
-```text
-support-agent-governance-prototype/
-├── AGENTS.md
-├── README.md
-├── requirements.txt
-├── requirements-llm.txt
-├── .gitignore
-├── .github/workflows/tests.yml
-├── data/
-│   └── eval_tickets.jsonl
-├── prompts/
-│   ├── classify_v1.md
-│   ├── classify_v2.md
-│   └── reply_v1.md
-├── results/
-│   └── eval_results.json
-├── assets/
-│   ├── architecture-diagram.drawio
-│   └── architecture-diagram.png
-├── docs/
-│   ├── architecture.md
-│   ├── decision-logic.md
-│   ├── evaluation-run.md
-│   ├── evaluation-set.md
-│   ├── guardrail.md
-│   ├── governance-controls.md
-│   ├── implementation-roadmap.md
-│   ├── llm-classifier.md
-│   ├── project-scope.md
-│   ├── ROADMAP.md
-│   └── sample-interactions.md
-├── src/
-│   ├── agent.py
-│   ├── eval_set.py
-│   ├── evaluate.py
-│   ├── llm_classifier.py
-│   └── prototype.py
-└── tests/
-    ├── test_agent.py
-    ├── test_eval_set.py
-    ├── test_evaluate.py
-    ├── test_llm_classifier.py
-    └── test_prototype.py
+```mermaid
+flowchart TD
+    T["Ticket"] --> R["Rules: src/prototype.py"]
+    T --> L["LLM classifier: src/llm_classifier.py"]
+    R --> G{"Guardrail: combine()"}
+    L --> G
+    G -- "a person must review" --> H["Fixed handoff message, no draft"]
+    G -- "rules and LLM agree on a low-risk case" --> D["LLM drafts a reply"]
+    D --> C{"check_draft()"}
+    C -- "fails" --> H
+    C -- "passes" --> A{"A person types yes?"}
+    A -- "yes" --> S["Simulated send"]
+    A -- "anything else" --> X["Rejected"]
+    H --> LOG["agent_audit_log.jsonl, redacted"]
+    S --> LOG
+    X --> LOG
 ```
 
----
+The guardrail (`combine()` in `src/agent.py`) sends a ticket to a person when any of these holds:
 
-## 6. How to Run the Prototype
+1. the rules escalate it or block automation, whatever the LLM says;
+2. the LLM's answer is rejected (invalid JSON, unknown value, refusal, truncation, API error);
+3. the rules and the LLM disagree on category, priority or sensitive data;
+4. the LLM's own classification requires review under the policy.
 
-### Requirements
+The rules are in `docs/decision-logic.md`, the guardrail and the draft checks in `docs/guardrail.md`, and the classifier in `docs/llm-classifier.md`.
 
-- Python 3.10 or higher (standard library only, no packages to install for the rules, the tests and the results table)
-- Only to call the API (sections 6 and 8): `pip install -r requirements-llm.txt` and an `ANTHROPIC_API_KEY` set in your terminal. The key never goes in a file in this repository (`.env` is git-ignored)
-- Local terminal or Git Bash
-- No cloud services required
-- No Microsoft automation services required in this phase
+## Results
 
-The rules prototype runs locally and does not require Azure, Copilot Studio, Power Automate, or Microsoft 365 Developer resources.
-
-### Run all sample tickets
-
-```bash
-py src/prototype.py
-```
-
-This processes all simulated tickets and prints a summary of the results.
-
-### List available tickets
-
-```bash
-py src/prototype.py --list
-```
-
-This displays the available simulated ticket IDs.
-
-### Process a specific ticket
-
-```bash
-py src/prototype.py --ticket TCK-009
-```
-
-This processes one specific ticket by ID.
-
-### Test invalid ticket handling
-
-```bash
-py src/prototype.py --ticket TCK-999
-```
-
-This validates how the prototype handles an unknown ticket ID.
-
----
-
-### Run the tests
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-The suite checks the expected result of every simulated ticket, each governance rule (escalation, automation blocking, priority), sensitive-data detection, audit-log redaction and the command-line options. A change to a rule has to change a test too.
-
-### Measure the rules on the evaluation set
-
-```bash
-py src/eval_set.py
-```
-
-This compares the rules with the 30 labelled tickets in `data/eval_tickets.jsonl` and prints the baseline described in `docs/evaluation-set.md`.
-
-### Run the LLM agent on one evaluation ticket (calls the API)
-
-```bash
-py src/agent.py --ticket EVAL-005 --model claude-haiku-5-5
-```
-
-This classifies the ticket with Claude, applies the guardrail, drafts a reply only if automation is allowed, asks you to approve it and writes `agent_audit_log.jsonl` (git-ignored). Sending is simulated.
-
-### Print the evaluation results table (no API call)
-
-```bash
-py src/evaluate.py --table results/eval_results.json
-```
-
-Re-running the full evaluation (120 API calls) is described in `docs/evaluation-run.md`.
-
----
-
-## 7. Prototype Results
-
-Running all simulated tickets produces the following summary (also asserted by `test_published_summary`):
-
-```text
-Total tickets processed: 10
-Human escalation required: 6
-Automation allowed: 4
-Automation blocked: 6
-Sensitive data cases: 3
-```
-
----
-
-## 8. LLM Triage with Guardrail: Results
-
-Flow for each ticket: the rules and the LLM both classify it; the guardrail keeps the stricter decision; automation is allowed only when both agree on a low-risk case; an LLM reply draft is produced only then, is checked (sensitive data, claims of actions performed, length) and needs a person's explicit approval. Details: `docs/guardrail.md`, `docs/llm-classifier.md`.
-
-The table compares the rules alone with two models (Claude Haiku 5.5 and Claude Sonnet 5.5) and two prompt versions (`v1` minimal, `v2` with the written policy), on the 30 labelled synthetic tickets. It is generated from `results/eval_results.json` and a test checks that this README contains exactly that table. Prices are those stored in the results file, checked on 2026-11-10.
+The table compares the rules alone with two models (Claude Haiku 5.5 and Claude Sonnet 5.5) and two prompt versions (`v1` minimal, `v2` with the written policy), on the 30 labelled synthetic tickets. It is generated from `results/eval_results.json`, and a test checks that this README contains exactly that table. Prices are those stored in the results file, checked on 2026-11-10.
 
 | Classifier | Category | Priority | Invalid LLM output | Rules-LLM disagreements | Unsafe automation, LLM alone | Unsafe automation, with guardrail | Unnecessary review | Cost per ticket (US$) |
 |---|---|---|---|---|---|---|---|---|
@@ -250,118 +65,66 @@ What the per-ticket records show (detail in `docs/evaluation-run.md`):
 - Only classification was evaluated. Reply drafts and latency were not.
 - Five injection tickets are a sample, not a security assessment. The ticket text is wrapped as data and the guardrail limits the damage, but a full prompt-injection defence is not implemented.
 - The ticket text is sent to the API as written (only the requester's name is left out). Masking sensitive values before the call is not implemented.
-- Human approval is a console prompt, and sending is simulated: there is no ticketing or mail integration.
+- Human approval is a console prompt, and sending is simulated.
 
----
+## Running it
 
-## 9. Governance and Risk Controls
+No installation is needed for the rules, the tests and the results table.
 
-This prototype includes governance-oriented controls to demonstrate responsible automation design.
-
-Key controls include:
-
-- human escalation for sensitive or high-risk tickets;
-- automation blocking when predefined risk conditions are detected;
-- sensitive data redaction in local audit logs;
-- deterministic rule-based decision logic;
-- clear separation between automated response and human review;
-- documented decision logic;
-- documented governance controls;
-- prototype limitations explicitly stated.
-
-The goal is to show that AI-enabled automation should operate within defined boundaries, especially in environments involving access, incidents, sensitive information, or business-critical operations.
-
----
-
-## 10. Audit Logging
-
-The prototype creates or updates a local file named:
-
-```text
-audit_log.jsonl
+```bash
+python -m unittest discover -s tests -v                # the test suite
+py src/prototype.py                                    # the rules on the 10 sample tickets
+py src/prototype.py --ticket TCK-009                   # one sample ticket (--list shows the IDs)
+py src/eval_set.py                                     # the rules against the 30 labelled tickets
+py src/evaluate.py --table results/eval_results.json   # the results table, from the saved run
 ```
 
-This file is generated at runtime and is intentionally excluded from version control through `.gitignore`.
-
-The LLM agent (`src/agent.py`) writes `agent_audit_log.jsonl` the same way, with both decisions, the draft and the human outcome. It is also git-ignored.
-
-Audit logs are not committed to the repository because runtime logs may contain operational or sensitive information, even when redaction controls are applied.
-
----
-
-## 11. Prototype vs Production Disclaimer
-
-This project is a local prototype.
-
-It is intended for portfolio, learning, architecture demonstration, and governance discussion purposes.
-
-It is not production-ready and does not include:
-
-- real user authentication;
-- real ticketing system integration;
-- production-grade AI model integration (the API call exists for evaluation, with no masking of the ticket text);
-- real-time monitoring;
-- enterprise-grade logging;
-- role-based access control;
-- encryption controls;
-- secure secret management;
-- API security;
-- database persistence;
-- human approval workflow integration (approval is a console prompt and sending is simulated);
-- compliance certification.
-
-A production implementation would require additional security, privacy, operational resilience, model governance, monitoring, access control, and enterprise integration controls.
-
----
-
-## 12. Documentation
-
-Additional documentation is available in the `docs/` folder:
-
-- `docs/project-scope.md` — project scope and planning;
-- `docs/architecture.md` — solution architecture;
-- `docs/decision-logic.md` — classification, prioritization, and escalation logic;
-- `docs/governance-controls.md` — governance and risk controls;
-- `docs/sample-interactions.md` — example prototype interactions;
-- `docs/implementation-roadmap.md` — future implementation roadmap;
-- `docs/evaluation-set.md` — labelled evaluation set and rules-only baseline;
-- `docs/llm-classifier.md` — LLM classification with validated JSON output;
-- `docs/guardrail.md` — rules as guardrail over the LLM, reply draft checks and human approval (`src/agent.py`);
-- `docs/evaluation-run.md` — how the evaluation runs, the results of the run of 2026-11-10 and their limitations;
-- `docs/ROADMAP.md` — current status and what is next.
-
----
-
-## 13. Architecture Diagram
-
-The architecture diagram is available in:
+Running all sample tickets ends with this summary (the numbers are asserted by `test_published_summary`):
 
 ```text
-assets/architecture-diagram.png
+Total tickets processed: 10
+Human escalation required: 6
+Automation allowed: 4
+Automation blocked: 6
+Sensitive data cases: 3
 ```
 
-The editable draw.io source file is also included:
+To run the agent on one evaluation ticket against the real API, install the SDK and set the key in your terminal. The key never goes in a file in this repository (`.env` is git-ignored).
+
+```bash
+pip install -r requirements-llm.txt
+py src/agent.py --ticket EVAL-005 --model claude-haiku-5-5
+```
+
+This classifies the ticket with Claude, applies the guardrail, drafts a reply only if automation is allowed, asks you to approve it and appends to `agent_audit_log.jsonl` (git-ignored). Re-running the full evaluation (120 API calls) is described in `docs/evaluation-run.md`.
+
+## Repository layout
 
 ```text
-assets/architecture-diagram.drawio
+src/prototype.py        deterministic rules, sample tickets, audit log with redaction
+src/llm_classifier.py   LLM classification with locally validated JSON
+src/agent.py            guardrail, reply draft checks, human approval
+src/eval_set.py         evaluation set loader and rules-only baseline
+src/evaluate.py         evaluation harness (prompts x models) and results table
+prompts/                versioned prompts compared by the evaluation
+data/eval_tickets.jsonl 30 labelled synthetic tickets
+results/                the committed evaluation run behind every published number
+tests/                  unittest suite, standard library only
+docs/                   decision logic, guardrail, evaluation, governance controls
 ```
 
----
+## What this is not
 
-## 14. Implementation Roadmap
+A local prototype, not a production system. There is no authentication, no ticketing or mail integration, no persistence beyond two local log files, no monitoring and no access control. All data is synthetic. The audit logs are written at run time and are not committed, because a log can hold sensitive text even after redaction.
 
-Possible next steps include:
+## Documentation
 
-- improving the ticket classification logic;
-- adding more simulated ticket scenarios;
-- expanding sensitive data detection patterns;
-- improving audit log formatting;
-- adding configuration files for business rules;
-- separating data, logic, and response templates;
-- integrating with a real ticketing system in a future phase;
-- prompt-injection defence beyond the guardrail (AGENT-V2-05);
-- masking sensitive values before the API call (AGENT-V2-06);
-- a demo of the agent flow;
-- mapping controls to AI Governance, GRC, IT Risk, and ITSM frameworks.
-
-Microsoft-based automation tools such as Copilot Studio, Power Automate, Azure, and Microsoft 365 Developer are intentionally excluded from the initial phase and may be considered only as a future roadmap option.
+- `docs/decision-logic.md`: the rules as implemented, with the expected result for each sample ticket.
+- `docs/guardrail.md`: how the rules and the LLM are combined, the draft checks and human approval.
+- `docs/llm-classifier.md`: the classifier, its prompt versions and why the output is validated locally.
+- `docs/evaluation-set.md`: the 30 labelled tickets, the labelling policy and the rules-only baseline.
+- `docs/evaluation-run.md`: how the evaluation runs, the results of 2026-11-10 and their limits.
+- `docs/governance-controls.md`: each control, where it is enforced and which test pins it.
+- `docs/architecture.md`: modules, data flow and what a production version would need.
+- `docs/project-scope.md`: the original planning document, kept for the planned taxonomy.
+- `docs/ROADMAP.md`: status and what is next.

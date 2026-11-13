@@ -152,7 +152,7 @@ Redaction (`redact_text()`) replaces disclosed secrets, emails, CPF numbers, pho
 | P3 Medium | Medium |
 | P4 Low | Low |
 
-Separating Data Privacy from Security and restoring the four-level P1–P4 scale are listed as future improvements in `docs/implementation-roadmap.md`.
+Separating Data Privacy from Security and restoring the four-level P1–P4 scale are possible future improvements.
 
 ---
 

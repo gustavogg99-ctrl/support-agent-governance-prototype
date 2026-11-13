@@ -226,7 +226,7 @@ class PublishedResults(unittest.TestCase):
         self.assertTrue(all(r["summary"]["sensitive_correct"] == 30 for r in SAVED["runs"]))
 
     def test_published_prose_claims(self) -> None:
-        """The sentences of README section 8 and docs/evaluation-run.md, ticket by ticket."""
+        """The sentences under the results table in the README and in docs/evaluation-run.md, ticket by ticket."""
         for model in c.MODELS:
             v1, v2 = saved_run(model, "v1"), saved_run(model, "v2")
             self.assertEqual((v1["summary"]["category_correct"], v2["summary"]["category_correct"]), (21, 28))
