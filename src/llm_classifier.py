@@ -30,13 +30,10 @@ import json
 import os
 import sys
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Protocol
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-import prototype as p  # noqa: E402
-from eval_set import CATEGORIES, PRIORITIES  # noqa: E402
+import prototype as p
+from eval_set import CATEGORIES, PRIORITIES
 
 PROMPTS_DIR = p.PROJECT_ROOT / "prompts"
 
