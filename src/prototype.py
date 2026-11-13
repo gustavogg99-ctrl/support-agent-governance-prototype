@@ -209,7 +209,7 @@ def evaluate_automation(
     sensitive_data_detected: bool,
     human_escalation_required: bool,
 ) -> tuple[bool, str]:
-    """Whether an automated response is allowed. Automation only ever means a templated reply."""
+    """Whether an automated response is allowed. Automation never means an action in a real system."""
     if category in ("Security Incident", "Access Request"):
         return False, "Automation is blocked for this category."
 
