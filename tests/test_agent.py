@@ -124,6 +124,7 @@ class DraftReply(unittest.TestCase):
             "passive action claim": "Your access has been granted.",
             "action claim (pt)": "Pronto, já redefini a sua senha.",
             "sensitive data": "We will contact you at someone@example.com.",
+            "key-value secret": "Sign in with the temporary password: Welcome1 and change it.",
             "empty": "   ",
             "too long": "x" * (a.MAX_REPLY_CHARACTERS + 1),
         }

@@ -48,9 +48,11 @@ Sensitive data detection runs first because its result affects priority, escalat
 | `cpf` | Brazilian CPF numbers, with or without punctuation | `123.456.789-00` |
 | `phone` | Brazilian phone numbers, optional +55 and area code | `(61) 91234-5678` |
 | `credit_card_like_number` | Sequences of 13–16 digits | card-like numbers |
-| `exposed_secret` | Phrases that disclose a secret | `my password is ...`, `token is ...` |
+| `exposed_secret` | A secret written in the ticket: a phrase that discloses it, or a value after `password`, `senha`, `token` or `secret` followed by `:` or `=` | `my password is ...`, `token is ...`, `password: ...`, `senha=...` |
 
-Design decision: the word "password" alone is **not** treated as sensitive data. A password reset request is operationally sensitive, but it does not expose a secret. Only an explicit disclosure (`my password is ...`) is flagged.
+Design decision: the word "password" alone is **not** treated as sensitive data. A password reset request is operationally sensitive, but it does not expose a secret. Only a secret that is written out is flagged: after a disclosure phrase (`my password is ...`) or after its name (`password: ...`).
+
+Detection and redaction read the same patterns, so whatever the audit log redacts as a secret is also detected. The price is a false positive when a word follows the name, as in `password: expired`: that ticket goes to a person.
 
 If any type is detected, the ticket is flagged and the detected types are recorded.
 
