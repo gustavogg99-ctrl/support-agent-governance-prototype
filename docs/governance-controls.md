@@ -10,7 +10,7 @@ This document lists the controls of the prototype and separates what the code en
 | Fail closed | Any doubt (an invalid LLM answer, a disagreement, a failed draft check) removes the ticket from the automated path. |
 | The rules win when they are stricter | The LLM may make a decision more cautious, never less. |
 | Traceability | Every decision is logged with its reason, and both the rules' and the LLM's decisions are kept. |
-| Data protection | Sensitive values are detected, block automation and are redacted before anything is written to a log. |
+| Data protection | Sensitive values are detected and block automation, and ticket text is redacted before it is written to a log. |
 
 ## Implemented controls
 

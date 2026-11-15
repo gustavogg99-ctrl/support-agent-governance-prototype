@@ -4,7 +4,7 @@ An IT support ticket triage agent in which an LLM classifies each ticket and a s
 
 The project measures that design instead of asserting it. On 30 labelled synthetic tickets, with prompt `v2`, no ticket that needed a person received an automated reply (0 of 21). The rules alone let 8 of 21 through, and the LLM without the rules would have let 1 through. The cost is that 4 tickets that could have been automated went to a person. The full table and its limits are under [Results](#results).
 
-It runs on Python 3.10 or higher. The rules, the tests and the results table use the standard library only; the `anthropic` SDK is needed only to call the real API. The test suite runs in CI on every push and never calls the API.
+It runs on Python 3.10 or higher. The rules, the tests and the results table use the standard library only; the `anthropic` SDK is needed only to call the real API. The test suite runs in CI on every pull request and on every push to `main`, and never calls the API.
 
 ## How it works
 
