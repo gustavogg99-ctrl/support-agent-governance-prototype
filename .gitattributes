@@ -1,0 +1,5 @@
+# Text files are stored and checked out with LF on every platform.
+# results/eval_results.json records SHA-256 hashes of the prompts and of the
+# evaluation set, so a CRLF checkout (Git for Windows default) would not match.
+* text=auto eol=lf
+*.png binary

@@ -194,7 +194,13 @@ def request_approval(decision: TriageDecision, draft: Draft, ask: Callable[[str]
 
 
 def write_agent_audit_log(ticket: p.Ticket, decision: TriageDecision, draft: Draft, outcome: Outcome) -> None:
-    """One JSON line per ticket with both decisions, the draft and the human outcome. Ticket text is redacted."""
+    """One JSON line per ticket with both decisions, the draft and the human outcome.
+
+    Everything a requester or the model wrote is redacted: the model can repeat
+    a value from the ticket in its reason or in an answer that gets rejected.
+    """
+    llm = asdict(decision.llm)
+    llm["reason"], llm["error"] = p.redact_text(llm["reason"]), p.redact_text(llm["error"])
     entry = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "ticket": {
@@ -209,12 +215,12 @@ def write_agent_audit_log(ticket: p.Ticket, decision: TriageDecision, draft: Dra
             "human_escalation_required": decision.rules.human_escalation_required,
             "automation_allowed": decision.rules.automation_allowed,
         },
-        "llm_decision": asdict(decision.llm),
+        "llm_decision": llm,
         "final_decision": {
             "human_review": decision.human_review,
             "automation_allowed": decision.automation_allowed,
             "disagreements": decision.disagreements,
-            "reasons": decision.reasons,
+            "reasons": [p.redact_text(reason) for reason in decision.reasons],
         },
         "draft": {"ok": draft.ok, "error": draft.error, "text": p.redact_text(draft.text)},
         "human_outcome": outcome.status,

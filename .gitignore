@@ -4,8 +4,13 @@ audit_log.jsonl
 # Python cache files
 __pycache__/
 *.pyc
+
 # Local secrets (never commit an API key)
 .env
+
+# Local virtual environment (pip install -r requirements-llm.txt)
+.venv/
+venv/
 
 # Runtime log of the LLM agent (src/agent.py)
 agent_audit_log.jsonl
