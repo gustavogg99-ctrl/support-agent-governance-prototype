@@ -70,7 +70,7 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | Fix | The agent and both command lines use prompt `v2` by default; a test ties the default to the safest version in `results/eval_results.json` | — | #15 |
 | Fix | The action-claim check of reply drafts covers a typographic apostrophe, adverbs, the resulting state and more Portuguese forms. It only became stricter | — | #16 |
 | Docs | This roadmap after the cleanup; the breadth of the phone pattern stated as a limitation and pinned by a test | — | #17 |
-| Cleanup | Follow-ups: `open_cli_session()` typed with its import at the top; one JSON reply helper for the tests (`tests/fakes.py`); the success path of both command lines tested with a scripted client | — | — |
+| Cleanup | Follow-ups: `open_cli_session()` typed with its import at the top; one JSON reply helper for the tests (`tests/fakes.py`); the success path of both command lines tested with a scripted client | — | #18 |
 
 ## Next (in order)
 
