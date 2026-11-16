@@ -85,9 +85,31 @@ class SensitiveDataDetection(unittest.TestCase):
                 self.assertIn(data_type, types)
 
     def test_the_word_password_alone_is_not_sensitive_data(self) -> None:
-        found, types = p.detect_sensitive_data("I forgot my password")
-        self.assertFalse(found)
-        self.assertEqual(types, [])
+        for text in ("I forgot my password", "Password reset: how do I do it?", "My password:"):
+            with self.subTest(text=text):
+                self.assertEqual(p.detect_sensitive_data(text), (False, []))
+
+    def test_a_secret_written_as_key_and_value_is_detected(self) -> None:
+        for text in ("password: Hunter2", "senha=Abc123", "Token = abc123", "the secret:xyz"):
+            with self.subTest(text=text):
+                self.assertEqual(p.detect_sensitive_data(text), (True, ["exposed_secret"]))
+
+    def test_a_ticket_with_a_key_value_secret_goes_to_a_person(self) -> None:
+        ticket = p.Ticket("T-1", "Requester Name", "Login problem", "I cannot login. password: Hunter2")
+        a = p.analyze_ticket(ticket)
+        self.assertEqual(
+            (a.priority, a.sensitive_data_types, a.human_escalation_required, a.automation_allowed),
+            ("High", ["exposed_secret"], True, False),
+        )
+
+    def test_whatever_is_redacted_as_a_secret_is_also_detected(self) -> None:
+        texts = [f"{t.subject} {t.description}" for t in p.SAMPLE_TICKETS]
+        texts += ["password: Hunter2", "senha=Abc123", "my token is abc", "TOKEN: abc", "secret is out"]
+        for text in texts:
+            with self.subTest(text=text):
+                redacted_as_secret = "[REDACTED_SECRET]" in p.redact_text(text)
+                detected = "exposed_secret" in p.detect_sensitive_data(text)[1]
+                self.assertEqual(redacted_as_secret, detected)
 
 
 class Classification(unittest.TestCase):

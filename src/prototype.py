@@ -121,6 +121,7 @@ PERSONAL_DATA_PATTERNS = {
     "credit_card_like_number": (r"\b(?:\d[ -]*?){13,16}\b", "[REDACTED_NUMBER]"),
 }
 SECRET_DISCLOSURE = r"\b(my password is|minha senha é|token is|secret is)"
+SECRET_ASSIGNMENT = r"\b(password|senha|token|secret)\s*[:=]\s*\S+"
 
 
 def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
@@ -128,10 +129,14 @@ def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
     Detect values a ticket should not carry: personal data and disclosed secrets.
 
     The word "password" alone is not sensitive data. Asking for a password
-    reset is not the same as writing the password in the ticket.
+    reset is not the same as writing the password in the ticket. A secret
+    counts as written when a phrase discloses it ("my password is ...") or
+    when it follows its name ("password: ..."), which is what redact_text()
+    removes from the logs.
     """
     detected_types = [name for name, (pattern, _) in PERSONAL_DATA_PATTERNS.items() if re.search(pattern, text)]
-    if re.search(SECRET_DISCLOSURE + r"\b", text, flags=re.IGNORECASE):
+    secret_patterns = (SECRET_DISCLOSURE + r"\b", SECRET_ASSIGNMENT)
+    if any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in secret_patterns):
         detected_types.append("exposed_secret")
 
     return bool(detected_types), detected_types
@@ -261,7 +266,7 @@ def generate_safe_response(
 def redact_text(text: str) -> str:
     """Replace disclosed secrets and personal data with placeholders before text is written to a log."""
     text = re.sub(SECRET_DISCLOSURE + r"\s*:?\s*\S+", r"\1 [REDACTED_SECRET]", text, flags=re.IGNORECASE)
-    text = re.sub(r"\b(password|senha|token|secret)\s*[:=]\s*\S+", r"\1=[REDACTED_SECRET]", text, flags=re.IGNORECASE)
+    text = re.sub(SECRET_ASSIGNMENT, r"\1=[REDACTED_SECRET]", text, flags=re.IGNORECASE)
     for pattern, placeholder in PERSONAL_DATA_PATTERNS.values():
         text = re.sub(pattern, placeholder, text)
     return text
