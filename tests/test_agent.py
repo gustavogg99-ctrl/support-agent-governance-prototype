@@ -123,6 +123,16 @@ class DraftReply(unittest.TestCase):
             "action claim (en)": "Done! I have reset your password.",
             "passive action claim": "Your access has been granted.",
             "action claim (pt)": "Pronto, já redefini a sua senha.",
+            "typographic apostrophe": "I’ve reset your password.",
+            "adverb before the verb": "We have successfully reset your password.",
+            "adverb after have": "I have now unlocked your account.",
+            "no auxiliary": "I just reset it for you.",
+            "adverb inside the passive": "Your access has now been granted.",
+            "state after the action": "Your password is now reset.",
+            "passive (pt), verb missing before": "Sua senha foi atualizada.",
+            "just done (pt)": "Acabei de redefinir a sua senha.",
+            "we did (pt)": "Desbloqueamos a sua conta.",
+            "state after the action (pt)": "Sua conta já está desbloqueada.",
             "sensitive data": "We will contact you at someone@example.com.",
             "key-value secret": "Sign in with the temporary password: Welcome1 and change it.",
             "empty": "   ",
@@ -137,7 +147,18 @@ class DraftReply(unittest.TestCase):
                 self.assertEqual(draft.text, a.HANDOFF_MESSAGE)
 
     def test_guidance_without_action_claims_passes(self) -> None:
-        self.assertEqual(a.check_draft("Please use the self-service portal to reset your password."), "")
+        guidance = (
+            "Please use the self-service portal to reset your password.",
+            "If you have changed your password recently, wait 15 minutes before trying again.",
+            "You can unlock your account yourself on the portal.",
+            "An analyst will review the request before any access is granted.",
+            "Use o portal de autoatendimento para redefinir a sua senha.",
+            "Se a senha expirou, o portal pede uma nova no primeiro acesso.",
+            "Um analista vai avaliar o pedido antes de liberar o acesso.",
+        )
+        for text in guidance:
+            with self.subTest(text=text):
+                self.assertEqual(a.check_draft(text), "")
 
     def test_a_draft_call_that_fails_or_is_cut_short_becomes_the_handoff_message(self) -> None:
         class DraftFails(RoutingClient):

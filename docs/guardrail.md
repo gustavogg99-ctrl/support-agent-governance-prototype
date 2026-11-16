@@ -39,7 +39,7 @@ The LLM drafts a reply only when automation is allowed. The draft is discarded, 
 
 - it is empty or longer than 1,200 characters;
 - it contains sensitive data (the same detector as the rules);
-- it claims an action was performed ("I have reset…", "has been granted…", "já redefini…", "foi liberado…"): a keyword heuristic in English and Portuguese, not a guarantee.
+- it claims an action was performed ("I have reset…", "has been granted…", "já redefini…", "foi liberado…"): a keyword heuristic in English and Portuguese, not a guarantee. It errs towards discarding: guidance worded like a claim ("We reset passwords only through the portal") is rejected too, and the requester gets the handoff message.
 
 ## Human approval
 

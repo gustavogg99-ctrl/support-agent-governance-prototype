@@ -61,11 +61,27 @@ HANDOFF_MESSAGE = (
 )
 
 # A draft must never claim that a real action happened (English and Portuguese).
+# This is a keyword heuristic, not a guarantee: it errs towards discarding a draft,
+# and a person still approves whatever passes.
+_DONE = "reset|unlocked|granted|changed|approved|installed|fixed|restored|updated|enabled"
+_ADVERBS = r"(?:(?:already|now|just|also|successfully)\s+)*"
+_FEITO = "resetad|redefinid|desbloquead|concedid|alterad|aprovad|liberad|instalad|corrigid|atualizad|restaurad|habilitad"
 ACTION_CLAIM_PATTERNS = (
-    r"\b(i|we)('ve| have)?\s+(already\s+)?(reset|unlocked|granted|changed|approved|installed|fixed|restored|updated|enabled)\b",
-    r"\b(has|have)\s+been\s+(reset|unlocked|granted|changed|approved|installed|fixed|restored|updated|enabled)\b",
-    r"\b(já\s+)?(resetei|redefini|desbloqueei|concedi|alterei|aprovei|instalei|corrigi|restaurei|atualizei|liberei)\b",
-    r"\b(foi|foram)\s+(resetad|redefinid|desbloquead|concedid|alterad|aprovad|liberad|instalad|corrigid)[ao]s?\b",
+    # "I have reset", "I've just reset", "we successfully unlocked"
+    rf"\b(?:i|we)(?:['’]ve|\s+have)?\s+{_ADVERBS}(?:{_DONE})\b",
+    # "has been granted", "have now been successfully restored"
+    rf"\b(?:has|have)\s+{_ADVERBS}been\s+{_ADVERBS}(?:{_DONE})\b",
+    # "is now reset"
+    rf"\b(?:is|are)\s+now\s+(?:{_DONE})\b",
+    # "já redefini", "desbloqueamos"
+    r"\b(?:resetei|redefini|desbloqueei|concedi|alterei|aprovei|instalei|corrigi|restaurei|atualizei|liberei"
+    r"|resetamos|redefinimos|desbloqueamos|concedemos|alteramos|aprovamos|instalamos|corrigimos|restauramos"
+    r"|atualizamos|liberamos)\b",
+    # "acabei de redefinir"
+    r"\b(?:acabei|acabamos)\s+de\s+(?:resetar|redefinir|desbloquear|conceder|alterar|aprovar|liberar|instalar"
+    r"|corrigir|atualizar|restaurar)\b",
+    # "foi alterada", "já está desbloqueada"
+    rf"\b(?:foi|foram|está|estão)\s+(?:agora\s+)?(?:{_FEITO})[ao]s?\b",
 )
 
 
