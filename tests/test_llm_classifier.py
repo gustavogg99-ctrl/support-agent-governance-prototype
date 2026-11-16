@@ -67,7 +67,7 @@ class ValidOutput(unittest.TestCase):
             ("Technical Incident", "Medium", False),
         )
         self.assertEqual((result.input_tokens, result.output_tokens), (120, 40))
-        self.assertEqual((result.model, result.prompt_version), (c.DEFAULT_MODEL, "v1"))
+        self.assertEqual((result.model, result.prompt_version), (c.DEFAULT_MODEL, "v2"))
 
     def test_enum_casing_is_normalised(self) -> None:
         result = c.classify(TICKET, ScriptedClient(reply(category="security incident", priority="HIGH")))
@@ -118,7 +118,7 @@ class Request(unittest.TestCase):
         self.call = self.client.calls[0]
 
     def test_system_prompt_is_the_versioned_file(self) -> None:
-        self.assertEqual(self.call["system"], c.load_prompt("v1"))
+        self.assertEqual(self.call["system"], c.load_prompt("v2"))
         self.assertEqual(self.call["model"], "claude-sonnet-5-5")
 
     def test_ticket_text_is_wrapped_as_data(self) -> None:

@@ -96,7 +96,7 @@ pip install -r requirements-llm.txt
 py src/agent.py --ticket EVAL-005 --model claude-haiku-5-5
 ```
 
-This classifies the ticket with Claude, applies the guardrail, drafts a reply only if automation is allowed, asks you to approve it and appends to `agent_audit_log.jsonl` (git-ignored). Re-running the full evaluation (120 API calls) is described in `docs/evaluation-run.md`.
+This classifies the ticket with Claude using prompt `v2` (the default; `--prompt v1` selects the minimal one), applies the guardrail, drafts a reply only if automation is allowed, asks you to approve it and appends to `agent_audit_log.jsonl` (git-ignored). Re-running the full evaluation (120 API calls) is described in `docs/evaluation-run.md`.
 
 ## Repository layout
 
