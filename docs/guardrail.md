@@ -1,6 +1,6 @@
 # Guardrail and Human Approval
 
-`src/agent.py` connects the LLM classifier to the deterministic rules and to a person. It covers tasks AGENT-V2-04 (rules as guardrail) and AGENT-V2-10 (suggested reply with human approval).
+`src/agent.py` connects the LLM classifier to the deterministic rules and to a person.
 
 ## Flow
 
@@ -49,7 +49,7 @@ Nothing is sent without a person's explicit approval. Only `yes`/`y`/`sim`/`s` a
 
 In this version the LLM can only make a decision more cautious. Automation needs the rules **and** the LLM to agree. So the LLM can lower unsafe automation, but it cannot raise the automation rate above what the rules allow. Where the rules are wrong but harmless (for example, they fall back to General Support), the ticket still goes to a person.
 
-This is deliberate for a first version: the evaluation (Part 4) measures how much human review this costs. Letting the LLM decide some disagreements on its own would need that evidence first.
+This is deliberate for a first version: the evaluation (`docs/evaluation-run.md`) measures how much human review this costs. Letting the LLM decide some disagreements on its own would need that evidence first.
 
 ## Running it
 

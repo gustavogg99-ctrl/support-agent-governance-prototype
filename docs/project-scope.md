@@ -1,6 +1,6 @@
 # Project Scope — Support Agent Governance Prototype
 
-> **Note:** this is the Phase 1 planning document. It defines the target taxonomy (9 categories, P1–P4 priorities). The prototype implements a simplified version (6 categories, High / Medium / Low). The implemented rules and the mapping between both are in `docs/decision-logic.md`.
+> **Note:** this is the Phase 1 planning document, written before any code, and it is kept as written. It defines the target taxonomy (9 categories, P1–P4 priorities). The prototype implements a simplified version (6 categories, High / Medium / Low); the implemented rules and the mapping between both are in `docs/decision-logic.md`. Section 13 lists external API calls as out of scope: the LLM version added later calls the Anthropic API, as described in `docs/llm-classifier.md`.
 
 ## 1. Project Overview
 
@@ -9,8 +9,6 @@ The Support Agent Governance Prototype is a local prototype designed to simulate
 The agent receives support ticket descriptions, classifies the request, assigns an initial priority level, identifies potential risk indicators, decides whether the case can receive an automated response, and determines when human escalation is required.
 
 The project focuses on functional scope, governance, risk control, and decision logic. It does not aim to replace human support analysts or operate as a production system.
-
-This prototype is intended for portfolio demonstration, GitHub documentation, LinkedIn positioning, and interview discussions related to GRC, AI Governance, Technology Risk, ITSM, and automation.
 
 ---
 
@@ -283,8 +281,7 @@ The prototype will be considered successful if it can demonstrate the following 
 6. avoid automation when sensitive, ambiguous, or high-risk content is present;
 7. produce decision rationale for each ticket;
 8. support auditability and governance review;
-9. clearly distinguish prototype limitations from production requirements;
-10. support a professional portfolio narrative for GRC, AI Governance, Technology Risk, ITSM, and automation roles.
+9. clearly distinguish prototype limitations from production requirements.
 
 ---
 
@@ -309,33 +306,3 @@ The following items are outside the scope of this phase and this initial prototy
 15. legal or regulatory compliance certification.
 
 These items may be considered in a future roadmap, but they are not part of the initial prototype.
-
----
-
-## 14. Final Deliverables of Phase 1
-
-The final deliverables of Phase 1 are:
-
-1. a clear problem statement;
-2. a defined project objective;
-3. a simulated target user model;
-4. a list of supported ticket types;
-5. a classification taxonomy;
-6. initial priority levels;
-7. initial escalation rules;
-8. initial automation rules;
-9. agent boundaries and limitations;
-10. prototype success criteria;
-11. documented scope for use in the repository.
-
----
-
-## 15. Phase 1 Conclusion
-
-Phase 1 defines the functional scope of the Support Agent Governance Prototype.
-
-At this stage, the project has a clear purpose, target scenario, ticket taxonomy, priority structure, escalation principles, automation limits, governance principles, and success criteria.
-
-No code, technical architecture, or platform integration is defined in this phase.
-
-The next phase should focus on architecture and governance design, including how the agent workflow, decision points, audit logs, and human escalation controls will be represented.
