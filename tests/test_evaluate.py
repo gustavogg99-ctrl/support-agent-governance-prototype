@@ -18,17 +18,15 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+TESTS = Path(__file__).resolve().parent
+sys.path[:0] = [str(TESTS.parent / "src"), str(TESTS)]
 
 import eval_set as e  # noqa: E402
 import evaluate as ev  # noqa: E402
 import llm_classifier as c  # noqa: E402
+from fakes import classification_json  # noqa: E402
 
 ITEMS = e.load_eval_set()
-
-
-def reply(category: str, priority: str, sensitive: bool) -> str:
-    return json.dumps({"category": category, "priority": priority, "sensitive_data": sensitive, "reason": "r"})
 
 
 class OracleClient:
@@ -37,7 +35,7 @@ class OracleClient:
     def complete(self, *, model, system, user, schema):
         item = next(i for i in ITEMS if i.ticket.subject in user and i.ticket.description in user)
         x = item.expected
-        return c.LLMResponse(text=reply(x.category, x.priority, x.sensitive_data),
+        return c.LLMResponse(text=classification_json(x.category, x.priority, x.sensitive_data),
                              input_tokens=1000, output_tokens=100, stop_reason="end_turn")
 
 
@@ -84,7 +82,7 @@ class Metrics(unittest.TestCase):
 
     def test_guardrail_catches_what_a_naive_llm_alone_would_automate(self) -> None:
         """A classifier that calls everything a low service request: 21 tickets need a person, the rules catch all but 3."""
-        client = FixedClient(reply("Service Request", "Low", False))
+        client = FixedClient(classification_json("Service Request", "Low", False))
         rows = ev.evaluate_combination(ITEMS, client, "claude-haiku-5-5", "v1")
         s = ev.summarize(rows, "claude-haiku-5-5")
         self.assertEqual(s["review_required"], 21)
