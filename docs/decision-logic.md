@@ -183,6 +183,7 @@ Summary: 10 processed, 6 escalated, 4 allowed, 6 blocked, 3 with sensitive data.
 
 - Keyword matching, not natural language understanding or a machine learning model.
 - Sensitive data detection covers a small set of patterns and can produce false positives and false negatives.
+- The phone pattern matches any run of 8 or 9 digits, so an order number or a date written as `20261110` is flagged and the ticket goes to a person. It is left broad on purpose: a narrower pattern would stop detecting a phone number typed without separators, and the rules may only err towards caution.
 - No confidence score: ambiguity is inferred only from the absence of a keyword match.
 - No real integrations, authentication or approval workflows.
 
