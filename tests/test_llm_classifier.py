@@ -84,7 +84,9 @@ class InvalidOutputGoesToAPerson(unittest.TestCase):
             "not an object": "[]",
             "unknown category": reply(category="Hardware"),
             "unknown priority": reply(priority="P1"),
+            "category not a string": reply(category=3),
             "sensitive_data not boolean": reply(sensitive_data="no"),
+            "reason not a string": reply(reason=["a", "b"]),
             "extra key": reply(automation_allowed=True),
             "missing key": json.dumps({"category": "Technical Incident", "priority": "Low", "sensitive_data": False}),
         }
@@ -141,6 +143,18 @@ class Request(unittest.TestCase):
             c.load_prompt("v999")
 
 
+class StubAPIError(Exception):
+    """Stands in for anthropic.APIError."""
+
+
+def client_with_stubbed_sdk(messages: object) -> c.AnthropicClient:
+    """The real client over a stub of the SDK: no network and no key."""
+    stub = mock.Mock(APIError=StubAPIError, Anthropic=lambda: mock.Mock(messages=messages))
+    with mock.patch.dict(sys.modules, {"anthropic": stub}), \
+            mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-placeholder"}):
+        return c.AnthropicClient()
+
+
 class RealClientGuards(unittest.TestCase):
     def test_missing_api_key_fails_before_any_call(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -158,9 +172,6 @@ class RealClientGuards(unittest.TestCase):
         """The SDK is replaced by a stub: checks the request shape without network or key."""
         sent: dict = {}
 
-        class APIError(Exception):
-            pass
-
         class Block:
             def __init__(self, type_: str, text: str = "") -> None:
                 self.type, self.text = type_, text
@@ -174,10 +185,7 @@ class RealClientGuards(unittest.TestCase):
                     stop_reason="end_turn",
                 )
 
-        stub = mock.Mock(APIError=APIError, Anthropic=lambda: mock.Mock(messages=Messages()))
-        with mock.patch.dict(sys.modules, {"anthropic": stub}), \
-                mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-placeholder"}):
-            result = c.classify(TICKET, c.AnthropicClient(), model="claude-haiku-5-5")
+        result = c.classify(TICKET, client_with_stubbed_sdk(Messages()), model="claude-haiku-5-5")
 
         self.assertTrue(result.ok)
         self.assertEqual((result.input_tokens, result.output_tokens), (300, 90))
@@ -185,6 +193,33 @@ class RealClientGuards(unittest.TestCase):
         self.assertEqual(sent["output_config"]["effort"], "low")
         self.assertEqual(sent["output_config"]["format"], {"type": "json_schema", "schema": c.OUTPUT_SCHEMA})
         self.assertEqual(sent["messages"][0]["role"], "user")
+
+    def test_sdk_error_becomes_a_failed_classification(self) -> None:
+        """Network, authentication and rate-limit errors reach the guardrail as ok=False, not as an exception."""
+        class RateLimitError(StubAPIError):
+            pass
+
+        class Messages:
+            def create(self, **kwargs):
+                raise RateLimitError("429")
+
+        result = c.classify(TICKET, client_with_stubbed_sdk(Messages()))
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error, "api error: RateLimitError")
+
+    def test_missing_sdk_is_explained(self) -> None:
+        with mock.patch.dict(sys.modules, {"anthropic": None}), \
+                mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-placeholder"}):
+            with self.assertRaisesRegex(c.LLMError, "requirements-llm.txt"):
+                c.AnthropicClient()
+
+    def test_command_line_rejects_a_ticket_outside_the_evaluation_set(self) -> None:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = c.main(["--ticket", "EVAL-999"])
+        self.assertEqual(code, 2)
+        self.assertIn("not in the evaluation set", out.getvalue())
 
     def test_sdk_is_not_imported_by_the_core(self) -> None:
         c.classify(TICKET, ScriptedClient(reply()))

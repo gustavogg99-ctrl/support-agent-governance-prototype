@@ -77,19 +77,25 @@ class EvalSetFile(unittest.TestCase):
 
 class EvalSetDocumentation(unittest.TestCase):
     def test_docs_table_matches_the_data_file(self) -> None:
-        """docs/evaluation-set.md lists every ticket with the label in the data file."""
+        """docs/evaluation-set.md shows every ticket as it is in the data file, and what the rules decide for it."""
         doc = (Path(__file__).resolve().parent.parent / "docs" / "evaluation-set.md").read_text(encoding="utf-8")
         rows = {line.split("|")[1].strip(): line for line in doc.splitlines() if line.startswith("| EVAL-")}
         items = e.load_eval_set()
         self.assertEqual(sorted(rows), [item.ticket.ticket_id for item in items])
-        for item in items:
+        for item, baseline in zip(items, e.run_rules_baseline(items)):
             with self.subTest(ticket=item.ticket.ticket_id):
                 cells = [cell.strip() for cell in rows[item.ticket.ticket_id].split("|")]
-                self.assertEqual(cells[5:9], [
+                rules = f"{baseline.analysis.category}, {baseline.analysis.priority}"
+                self.assertEqual(cells[2:11], [
+                    item.group,
+                    item.language,
+                    f"**{item.ticket.subject}**: {item.ticket.description}",
                     item.expected.category,
                     item.expected.priority,
                     "yes" if item.expected.sensitive_data else "no",
                     "yes" if item.expected.human_review else "no",
+                    item.rationale,
+                    rules + (" ⚠️ unsafe" if baseline.unsafe_automation else ""),
                 ])
 
 
@@ -115,6 +121,12 @@ class Validation(unittest.TestCase):
             "empty rationale": broken(("rationale",), " "),
             "review contradicts policy": broken(("expected", "human_review"), True),
             "sensitive but not High": broken(("expected", "sensitive_data"), True),
+            "unknown language": broken(("language",), "es"),
+            "missing field": {key: value for key, value in VALID_RECORD.items() if key != "rationale"},
+            "security incident but not High": broken(
+                ("expected",),
+                {"category": "Security Incident", "priority": "Medium", "sensitive_data": False, "human_review": True},
+            ),
         }
         for name, record in cases.items():
             with self.subTest(case=name):
@@ -127,6 +139,13 @@ class Validation(unittest.TestCase):
             line = json.dumps(VALID_RECORD)
             path.write_text(f"{line}\n{line}\n", encoding="utf-8")
             with self.assertRaises(ValueError):
+                e.load_eval_set(path)
+
+    def test_a_broken_line_is_reported_with_its_number_and_blank_lines_are_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "eval.jsonl"
+            path.write_text(f"{json.dumps(VALID_RECORD)}\n\n{{not json\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "eval.jsonl, line 3"):
                 e.load_eval_set(path)
 
 

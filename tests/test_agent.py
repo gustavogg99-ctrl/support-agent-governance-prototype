@@ -62,7 +62,7 @@ class Guardrail(unittest.TestCase):
         """Exhaustive: for every evaluation and sample ticket the rules block, no LLM answer allows automation."""
         tickets = [item.ticket for item in e.load_eval_set()] + list(p.SAMPLE_TICKETS)
         blocked = [p.analyze_ticket(t) for t in tickets if not p.analyze_ticket(t).automation_allowed]
-        self.assertGreater(len(blocked), 20)
+        self.assertEqual(len(blocked), 22)
         answers = [llm(cat, pri, sens) for cat, pri, sens in
                    itertools.product(e.CATEGORIES, e.PRIORITIES, (False, True))] + [llm("", "", ok=False)]
         for rules in blocked:
@@ -137,6 +137,28 @@ class DraftReply(unittest.TestCase):
 
     def test_guidance_without_action_claims_passes(self) -> None:
         self.assertEqual(a.check_draft("Please use the self-service portal to reset your password."), "")
+
+    def test_a_draft_call_that_fails_or_is_cut_short_becomes_the_handoff_message(self) -> None:
+        class DraftFails(RoutingClient):
+            def complete(self, *, model, system, user, schema):
+                if schema is None:
+                    raise c.LLMError("RateLimitError")
+                return super().complete(model=model, system=system, user=user, schema=schema)
+
+        class DraftTruncated(RoutingClient):
+            def complete(self, *, model, system, user, schema):
+                response = super().complete(model=model, system=system, user=user, schema=schema)
+                if schema is None:
+                    return c.LLMResponse(response.text, response.input_tokens, response.output_tokens, "max_tokens")
+                return response
+
+        for client_class, error in ((DraftFails, "api error: RateLimitError"), (DraftTruncated, "stop reason: max_tokens")):
+            with self.subTest(client=client_class.__name__):
+                client = client_class(classification_json("Access Support", "Medium"))
+                decision = a.triage(ticket("TCK-001"), client)
+                self.assertTrue(decision.automation_allowed)
+                draft = a.draft_reply(decision, ticket("TCK-001"), client)
+                self.assertEqual((draft.ok, draft.text, draft.error), (False, a.HANDOFF_MESSAGE, error))
 
 
 class HumanApproval(unittest.TestCase):
