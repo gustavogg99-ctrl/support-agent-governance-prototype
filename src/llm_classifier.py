@@ -39,7 +39,9 @@ PROMPTS_DIR = p.PROJECT_ROOT / "prompts"
 
 MODELS = ("claude-haiku-5-5", "claude-sonnet-5-5")
 DEFAULT_MODEL = "claude-haiku-5-5"
-DEFAULT_PROMPT_VERSION = "v1"
+# v2 states the triage policy. In the saved evaluation run it is the version that let no
+# ticket needing a person through (results/eval_results.json); a test keeps the two in step.
+DEFAULT_PROMPT_VERSION = "v2"
 DEFAULT_EFFORT = "low"
 MAX_TOKENS = 4096
 
@@ -236,7 +238,7 @@ def main(arguments: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Classify one evaluation ticket with Claude.")
     parser.add_argument("--ticket", required=True, help="evaluation ticket ID, e.g. EVAL-026")
     parser.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
-    parser.add_argument("--prompt", default=DEFAULT_PROMPT_VERSION, help="prompt version, e.g. v1")
+    parser.add_argument("--prompt", default=DEFAULT_PROMPT_VERSION, help="prompt version: v1 or v2")
     args = parser.parse_args(arguments)
 
     session = open_cli_session(args.ticket)

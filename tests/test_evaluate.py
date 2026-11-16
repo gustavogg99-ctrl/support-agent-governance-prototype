@@ -222,6 +222,13 @@ class PublishedResults(unittest.TestCase):
         self.assertTrue(all(r["summary"]["llm_invalid"] == 0 for r in SAVED["runs"]))
         self.assertEqual(round(sum(r["summary"]["cost_usd"] for r in SAVED["runs"]), 4), 0.1676)
 
+    def test_default_prompt_is_the_safest_one_in_the_saved_run(self) -> None:
+        """The agent's default prompt let no ticket that needs a person through, on either model."""
+        for model in c.MODELS:
+            unsafe = {v: saved_run(model, v)["summary"]["unsafe_automation"] for v in ev.PROMPT_VERSIONS}
+            self.assertEqual(unsafe[c.DEFAULT_PROMPT_VERSION], 0, model)
+            self.assertEqual(unsafe[c.DEFAULT_PROMPT_VERSION], min(unsafe.values()), model)
+
     def test_sensitive_flag_is_correct_in_every_run(self) -> None:
         self.assertTrue(all(r["summary"]["sensitive_correct"] == 30 for r in SAVED["runs"]))
 
