@@ -2,9 +2,8 @@
 Labelled evaluation set and the rules-only baseline.
 
 The evaluation set (data/eval_tickets.jsonl) holds synthetic IT support tickets,
-each with the expected triage decision written by hand. It is used to measure
-the deterministic rules today and, later, the LLM classifier against the same
-labels.
+each with the expected triage decision written by hand. The deterministic rules
+and the LLM classifier are measured against the same labels.
 
 Labelling policy (the labels follow the documented policy, not the regexes):
 - category: one of the six categories implemented in src/prototype.py;
@@ -29,14 +28,11 @@ Run from the repository root:
 from __future__ import annotations
 
 import json
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-import prototype as p  # noqa: E402
+import prototype as p
 
 EVAL_SET_FILE = p.PROJECT_ROOT / "data" / "eval_tickets.jsonl"
 

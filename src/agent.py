@@ -1,7 +1,7 @@
 """
 Triage agent: LLM classification + rules as guardrail + human approval.
 
-Flow for one ticket (tasks AGENT-V2-04 and AGENT-V2-10):
+Flow for one ticket:
 
     rules (src/prototype.py)  ─┐
                                ├─ combine() ── human review? ── yes → handoff message, no draft
@@ -35,14 +35,11 @@ import re
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Callable
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-import prototype as p  # noqa: E402
-from eval_set import policy_requires_review  # noqa: E402
-from llm_classifier import (  # noqa: E402
+import prototype as p
+from eval_set import policy_requires_review
+from llm_classifier import (
     DEFAULT_MODEL,
     DEFAULT_PROMPT_VERSION,
     MODELS,

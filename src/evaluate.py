@@ -1,5 +1,5 @@
 """
-Evaluation of the LLM triage against the labelled evaluation set (AGENT-V2-07).
+Evaluation of the LLM triage against the labelled evaluation set.
 
 Runs every ticket of data/eval_tickets.jsonl through the full guardrail
 (rules + LLM, see src/agent.py) for each combination of prompt version and
@@ -33,16 +33,14 @@ import argparse
 import hashlib
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-import prototype as p  # noqa: E402
-from agent import TriageDecision, triage  # noqa: E402
-from eval_set import (  # noqa: E402
+import prototype as p
+from agent import TriageDecision, triage
+from eval_set import (
     EVAL_SET_FILE,
     GROUPS,
     EvalTicket,
@@ -51,7 +49,7 @@ from eval_set import (  # noqa: E402
     run_rules_baseline,
     summarize as summarize_rules,
 )
-from llm_classifier import (  # noqa: E402
+from llm_classifier import (
     DEFAULT_EFFORT,
     MODELS,
     PROMPTS_DIR,
@@ -179,7 +177,7 @@ def row_to_dict(row: Row) -> dict[str, Any]:
     return {
         "ticket_id": row.item.ticket.ticket_id,
         "group": row.item.group,
-        "expected": row.item.expected.__dict__,
+        "expected": asdict(row.item.expected),
         "rules": {
             "category": rules.category,
             "priority": rules.priority,
@@ -222,7 +220,7 @@ def build_report(
     effort: str = DEFAULT_EFFORT,
     models: tuple[str, ...] = MODELS,
     prompt_versions: tuple[str, ...] = PROMPT_VERSIONS,
-    progress=lambda message: None,
+    progress: Callable[[str], None] = lambda message: None,
 ) -> dict[str, Any]:
     """Run every prompt version x model combination and return a JSON-serialisable report."""
     runs = []
