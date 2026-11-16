@@ -69,7 +69,7 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | Fix | A secret written as `password: value`, `senha=value`, `token=value` or `secret: value` is detected, so the ticket is escalated and blocked. It was redacted in the log but not detected. No evaluation or sample ticket changes | — | #14 |
 | Fix | The agent and both command lines use prompt `v2` by default; a test ties the default to the safest version in `results/eval_results.json` | — | #15 |
 | Fix | The action-claim check of reply drafts covers a typographic apostrophe, adverbs, the resulting state and more Portuguese forms. It only became stricter | — | #16 |
-| Docs | This roadmap after the cleanup; the breadth of the phone pattern stated as a limitation and pinned by a test | — | — |
+| Docs | This roadmap after the cleanup; the breadth of the phone pattern stated as a limitation and pinned by a test | — | #17 |
 
 ## Next (in order)
 
