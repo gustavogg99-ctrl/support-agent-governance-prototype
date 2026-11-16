@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-16 (Parts 1–5 merged; quality cleanup in PRs #8 to #17; the cleanup was done in a separate chat, which ends here: start the next part in a new chat)._
+_Last updated: 2026-11-16 (Parts 1–5 merged; quality cleanup in PRs #8 to #18; the cleanup was done in a separate chat, which ends here: start the next part in a new chat)._
 
 ## Goal
 
@@ -70,6 +70,7 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | Fix | The agent and both command lines use prompt `v2` by default; a test ties the default to the safest version in `results/eval_results.json` | — | #15 |
 | Fix | The action-claim check of reply drafts covers a typographic apostrophe, adverbs, the resulting state and more Portuguese forms. It only became stricter | — | #16 |
 | Docs | This roadmap after the cleanup; the breadth of the phone pattern stated as a limitation and pinned by a test | — | #17 |
+| Cleanup | Follow-ups: `open_cli_session()` typed with its import at the top; one JSON reply helper for the tests (`tests/fakes.py`); the success path of both command lines tested with a scripted client | — | — |
 
 ## Next (in order)
 
@@ -81,7 +82,6 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 - AGENT-V2-05: prompt-injection defence beyond the guardrail.
 - AGENT-V2-06: masking sensitive values before the API call (its other half, the audit log of both decisions, was done in Part 3).
 - Demo/GIF; AGENT-V2-09 (portfolio card and LinkedIn), done in the Portfolio repository.
-- Small follow-ups left by the cleanup: move the `load_eval_set` import of `open_cli_session()` to the top of `src/llm_classifier.py` and type its return; share the JSON reply helper that three test files each define; the success path of `agent.main()` and `llm_classifier.main()` has no test (it needs the real API).
 
 ## Handoff (every 3 parts)
 

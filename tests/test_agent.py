@@ -8,17 +8,21 @@ Standard library only. Run from the repository root:
 
 from __future__ import annotations
 
+import io
 import itertools
 import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+TESTS = Path(__file__).resolve().parent
+sys.path[:0] = [str(TESTS.parent / "src"), str(TESTS)]
 
 import agent as a  # noqa: E402
+from fakes import classification_json  # noqa: E402
 import eval_set as e  # noqa: E402
 import llm_classifier as c  # noqa: E402
 import prototype as p  # noqa: E402
@@ -51,10 +55,6 @@ class RoutingClient:
         self.calls.append(kind)
         text = self.classification if kind == "classify" else self.draft
         return c.LLMResponse(text=text, input_tokens=100, output_tokens=30, stop_reason="end_turn")
-
-
-def classification_json(category: str, priority: str, sensitive: bool = False) -> str:
-    return json.dumps({"category": category, "priority": priority, "sensitive_data": sensitive, "reason": "r"})
 
 
 class Guardrail(unittest.TestCase):
@@ -204,6 +204,20 @@ class HumanApproval(unittest.TestCase):
         outcome = a.run(ticket(ticket_id), RoutingClient(classification), ask=ask, show=lambda _: None)
         return outcome, asked
 
+    def test_command_line_runs_one_evaluation_ticket_end_to_end(self) -> None:
+        """The real client is replaced by a scripted one: rules and LLM agree, a person says yes, the log is written."""
+        client = RoutingClient(classification_json("Technical Incident", "Medium"))
+        out = io.StringIO()
+        with mock.patch.object(c, "AnthropicClient", return_value=client), \
+                mock.patch("builtins.input", return_value="yes"), redirect_stdout(out):
+            code = a.main(["--ticket", "eval-001"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(client.calls, ["classify", "draft"])
+        self.assertIn("Outcome: approved_simulated_send", out.getvalue())
+        entry = json.loads(self.log.read_text(encoding="utf-8"))
+        self.assertEqual((entry["ticket"]["ticket_id"], entry["llm_decision"]["prompt_version"]), ("EVAL-001", "v2"))
+
     def test_only_an_explicit_yes_sends(self) -> None:
         for answer, status in (("yes", "approved_simulated_send"), ("sim", "approved_simulated_send"),
                                ("", "rejected"), ("no", "rejected"), ("maybe", "rejected")):
@@ -233,8 +247,8 @@ class HumanApproval(unittest.TestCase):
         """The model can repeat a value from the ticket in its reason, or in an answer that gets rejected."""
         cpf = "123.456.789-00"  # disclosed in TCK-005
         answers = {
-            "accepted": json.dumps({"category": "Service Request", "priority": "High", "sensitive_data": True,
-                                    "reason": f"The requester discloses the CPF {cpf}."}),
+            "accepted": classification_json("Service Request", "High", True,
+                                            reason=f"The requester discloses the CPF {cpf}."),
             "rejected": classification_json(f"CPF {cpf}", "High", True),
         }
         for name, answer in answers.items():

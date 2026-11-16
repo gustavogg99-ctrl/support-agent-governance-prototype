@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 import prototype as p
-from eval_set import CATEGORIES, PRIORITIES
+from eval_set import CATEGORIES, PRIORITIES, EvalTicket, load_eval_set
 
 PROMPTS_DIR = p.PROJECT_ROOT / "prompts"
 
@@ -218,10 +218,8 @@ class AnthropicClient:
         )
 
 
-def open_cli_session(ticket_id: str) -> tuple[Any, AnthropicClient] | None:
+def open_cli_session(ticket_id: str) -> tuple[EvalTicket, AnthropicClient] | None:
     """For the command lines: the evaluation ticket and a real client, or None after printing why not."""
-    from eval_set import load_eval_set
-
     items = {item.ticket.ticket_id: item for item in load_eval_set()}
     item = items.get(ticket_id.strip().upper())
     if item is None:
