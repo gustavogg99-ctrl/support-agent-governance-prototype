@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-10 (Parts 1–3 merged in the first chat; handoff 1 done; this chat started at Part 4 and counts from 0; Parts 4 and 5 done: 2 parts in this chat; the next part triggers the handoff)._
+_Last updated: 2026-11-16 (Parts 1–5 merged; quality cleanup in PRs #8 to #17; the cleanup was done in a separate chat, which ends here: start the next part in a new chat)._
 
 ## Goal
 
@@ -20,7 +20,7 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 ## How we work
 
 - One part = one branch + one pull request + the matching Notion task(s) updated.
-- Before opening a PR: `python -m unittest discover -s tests -v` passes locally; CI (Python 3.10 and 3.13) must be green.
+- Before opening a PR: `python -m unittest discover -s tests -v` passes locally; CI (Python 3.10 and 3.13 on Ubuntu, 3.13 on Windows) must be green.
 - Gustavo reviews and merges with **"Create a merge commit"**, then deletes the branch. Never merge without his go-ahead. **Every time a PR is opened, send him the PR link** (where the merge button is).
 - Gustavo works at his own pace; the dates below are limits, not a schedule. When information from him is needed, ask for **one item at a time**.
 - Explain every decision so Gustavo can defend it in an interview (what, why, the alternative rejected and its trade-off).
@@ -46,6 +46,10 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | Structured outputs (`output_config.format`) plus local validation; effort `low` for both models | The schema reduces malformed output, the local check is what the system trusts; equal effort keeps the comparison fair | Free-text parsing: fragile. Trusting the schema alone: enum casing is not guaranteed by the API |
 | Prompt v1 is minimal; v2 adds the written policy | The comparison measures the value of stating the policy, with no tuning to evaluation tickets | v2 tuned on failures of v1 on the evaluation set: overfits a 30-ticket set |
 | Automation only when rules **and** LLM agree on a low-risk case; any disagreement → person | First version: the LLM may only make decisions more cautious. Part 4 measures the extra human review this costs | Letting the LLM settle disagreements: raises automation, but without evidence yet |
+| Detection and redaction read one table of patterns, including a secret written as `key: value` | Whatever the log redacts as a secret must also block automation | Detecting only values that look like passwords: misses weak ones |
+| The phone pattern stays broad (any 8 or 9 digits) | A narrower one would miss a number typed without separators; the rules may only err towards caution | Requiring a separator or an area code: fewer false positives, real numbers missed |
+| A detected secret does not change the category (`password: x` stays Access Support) | The ticket is already escalated and blocked; tying category to detection would reclassify any text containing "token is" | Making every disclosure a Security Incident |
+| The agent's default prompt is `v2` | In the saved run it is the version with no unsafe automation on either model | Keeping `v1` and documenting `--prompt v2`: the default would be the prompt that failed |
 | The LLM drafts a reply only when automation is allowed; the draft is checked (sensitive data, action claims, length) and needs an explicit "yes" | No draft reaches a requester on a risky ticket; nothing is sent by default | Fixed templates only: safe but not "LLM drafts"; sending without approval: out of policy |
 
 ## Done
@@ -58,18 +62,26 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | 3 | `src/agent.py`: guardrail `combine()` (rules block → stays blocked; LLM invalid, disagreement or LLM-required review → person), LLM reply draft only when automation is allowed, `check_draft()`, explicit human approval, simulated send, `agent_audit_log.jsonl` with both decisions; `prompts/reply_v1.md`; `docs/guardrail.md` | AGENT-V2-04, AGENT-V2-10 | #4 |
 | 4 | `src/evaluate.py` (2 prompts × 2 models, final decision through the guardrail, cost from reported tokens), `prompts/classify_v2.md` (approved by Gustavo), `tests/test_evaluate.py`, `docs/evaluation-run.md`. Run of 10/11/2026 committed in `results/eval_results.json` (US$ 0.1676): category 21→28/30 and unsafe automation 1→0 of 21 from v1 to v2 on both models; rules only: 9/30 and 8/21 | AGENT-V2-07 | #6 |
 | 5 | `README.md` rewritten for the LLM version: scope, structure, how to run the agent, results table copied from `results/eval_results.json`, reading of the results and limitations. `tests/test_evaluate.py` pins the README and `docs/evaluation-run.md` to the committed results (table and prose claims). The short version for the iFood application is complete | AGENT-V2-08 | #7 |
+| Cleanup | Windows clones pass the suite (`.gitattributes`: the tests hash files, and Git for Windows rewrote line endings); the agent audit log redacts what the LLM wrote; Windows job in CI, actions pinned to commits | — | #8 |
+| Cleanup | Code: redundant `sys.path` setup and task codes out of `src/`; one table of sensitive-data patterns for detection and redaction; `prototype.py` from 599 to 472 lines with identical output (compared on 20,010 generated tickets) | — | #9, #10, #11 |
+| Cleanup | Tests for the paths that send a ticket to a person after a failure (draft, SDK, validation); the README summary and every column of the table in `docs/evaluation-set.md` compared with the code | — | #12 |
 | Cleanup | Docs brought in line with the code: README rewritten around the measured results, `docs/architecture.md` and `docs/governance-controls.md` rewritten for the LLM version (each control names the test that pins it), stale `docs/implementation-roadmap.md` and `docs/sample-interactions.md` removed, internal task codes removed from the other docs. No published number changed | — | #13 |
+| Fix | A secret written as `password: value`, `senha=value`, `token=value` or `secret: value` is detected, so the ticket is escalated and blocked. It was redacted in the log but not detected. No evaluation or sample ticket changes | — | #14 |
+| Fix | The agent and both command lines use prompt `v2` by default; a test ties the default to the safest version in `results/eval_results.json` | — | #15 |
+| Fix | The action-claim check of reply drafts covers a typographic apostrophe, adverbs, the resulting state and more Portuguese forms. It only became stricter | — | #16 |
+| Docs | This roadmap after the cleanup; the breadth of the phone pattern stated as a limitation and pinned by a test | — | #17 |
 
 ## Next (in order)
 
-1. **Short version done once the Part 5 PR is merged** (deadline 13/11). What is left is on Gustavo's side: the Notion tasks `AGENT-V2-07`, `AGENT-V2-08` and `IFOOD-02`, and the iFood application on 16/11.
-2. Nothing else is scheduled. Starting anything below, or a new part, is Gustavo's decision on or after 17/11; the next part is the 3rd in this chat, so the handoff comes right after it is merged.
+1. **Short version done:** Part 5 and the cleanup are merged. What is left is on Gustavo's side: the Notion tasks `AGENT-V2-07`, `AGENT-V2-08` and `IFOOD-02`, and the iFood application on 16/11.
+2. Nothing else is scheduled. Starting anything below, or a new part, is Gustavo's decision on or after 17/11, in a new chat.
 
 ## Later (no deadline, after 16/11)
 
 - AGENT-V2-05: prompt-injection defence beyond the guardrail.
 - AGENT-V2-06: masking sensitive values before the API call (its other half, the audit log of both decisions, was done in Part 3).
 - Demo/GIF; AGENT-V2-09 (portfolio card and LinkedIn), done in the Portfolio repository.
+- Small follow-ups left by the cleanup: move the `load_eval_set` import of `open_cli_session()` to the top of `src/llm_classifier.py` and type its return; share the JSON reply helper that three test files each define; the success path of `agent.main()` and `llm_classifier.main()` has no test (it needs the real API).
 
 ## Handoff (every 3 parts)
 

@@ -84,6 +84,12 @@ class SensitiveDataDetection(unittest.TestCase):
                 self.assertTrue(found)
                 self.assertIn(data_type, types)
 
+    def test_any_run_of_eight_or_nine_digits_counts_as_a_phone(self) -> None:
+        """Documented limitation: broad on purpose, so a number typed without separators is still caught."""
+        for text in ("my number is 999991234", "order 12345678 is late", "opened on 20261110"):
+            with self.subTest(text=text):
+                self.assertEqual(p.detect_sensitive_data(text), (True, ["phone"]))
+
     def test_the_word_password_alone_is_not_sensitive_data(self) -> None:
         for text in ("I forgot my password", "Password reset: how do I do it?", "My password:"):
             with self.subTest(text=text):
