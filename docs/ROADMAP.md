@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-16 (Parts 1–5 merged; quality cleanup in PRs #8 to #18; the cleanup was done in a separate chat, which ends here: start the next part in a new chat)._
+_Last updated: 2026-11-17 (Parts 1–5 and the cleanup, PRs #1 to #18, merged; "Next" rewritten for the work after the short version. New chat started on 17/11: this PR is its part 1 of 3)._
 
 ## Goal
 
@@ -15,7 +15,7 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 - a person approves before any reply is sent;
 - an evaluation set measures accuracy, guardrail blocks, disagreements and cost per ticket.
 
-**Short version for the iFood GenAI (AI Builder) application:** merged by **13/11/2026** (slack until 15/11); Gustavo applies on 16/11. Notion task `IFOOD-02`. After that the project continues with no deadline.
+**Short version for the iFood GenAI (AI Builder) application:** done and merged; the application was sent. Notion task `IFOOD-02`. The project now continues with no deadline of its own.
 
 ## How we work
 
@@ -74,14 +74,21 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 
 ## Next (in order)
 
-1. **Short version done:** Part 5 and the cleanup are merged. What is left is on Gustavo's side: the Notion tasks `AGENT-V2-07`, `AGENT-V2-08` and `IFOOD-02`, and the iFood application on 16/11.
-2. Nothing else is scheduled. Starting anything below, or a new part, is Gustavo's decision on or after 17/11, in a new chat.
+The completion criteria of the project are met (CI green, results published in the README, full flow from ticket to log, nothing claimed that the code does not prove). What is left is publicising it, the leftovers of `AGENT-V2-08`, and a decision by Gustavo.
 
-## Later (no deadline, after 16/11)
+1. **`LINKEDIN-01`, post in PT and EN (deadline 24/11/2026).** Drafted in chat, published by Gustavo; no change to this repository. Only numbers from `results/eval_results.json` and the README: 30 synthetic tickets, one run, prompt v2, prices of 10/11/2026. Never "in production"; never a cost without its date and "prompt v2". Limitations stated in the post: synthetic set, one run, prompt v2 written from the same policy that produced the labels. Link: the case page at `https://gustavorodrigues.vercel.app/pt/projects/support-agent-governance-prototype`.
+2. **`AGENT-V2-08` leftovers:** replace `assets/architecture-diagram.*` (it still shows the rules-only prototype) with the LLM + guardrail + human approval flow; a terminal GIF; a demo of about 3 minutes. Offline only: the GIF and the demo replay saved or scripted results, so they cost nothing and need no key.
+3. **Reconcile `AGENT-V2-08` and `AGENT-V2-09` in Notion** after the post is published.
 
-- AGENT-V2-05: prompt-injection defence beyond the guardrail.
-- AGENT-V2-06: masking sensitive values before the API call (its other half, the audit log of both decisions, was done in Part 3).
-- Demo/GIF; AGENT-V2-09 (portfolio card and LinkedIn), done in the Portfolio repository.
+## Waiting on Gustavo
+
+- **Whether to continue with `AGENT-V2-05` and `AGENT-V2-06`.** His current inclination: leave them as documented next phases (under "Later"), with no delivery promised. If he goes ahead, they need to fit before he starts at Aoop on 01/12/2026 and before the API key expires on 10/12/2026.
+- `IFOOD-06` is his decision and is not part of this repository.
+
+## Later (no deadline; only if Gustavo decides to continue)
+
+- **`AGENT-V2-05`, prompt-injection detection in the rules.** Deterministic patterns in `src/prototype.py` (instructions addressed to the agent, fake system tags, dictated JSON) that escalate and block, with their tests. To measure it without tuning to the evaluation set, new injection tickets are needed, labelled by Gustavo; the 5 current ones cannot be both the reference and the target. Why it matters: in the saved v2 run, the rules allow automation on 4 of the 5 injection tickets (EVAL-026 to EVAL-029); they go to a person only because the LLM labels them Security Incident and disagrees with the rules. EVAL-030 is blocked by the rules, but because it discloses an email address. The rules never recognise the attack itself (`results/eval_results.json`, field `rules` of each ticket).
+- **`AGENT-V2-06`, masking before the API call.** Reuse the single pattern table (`redact_text()`) on the text sent to the LLM, proven by a test that inspects what the client receives. It changes the model's input, so the published results only stay valid after a new real run (about US$ 0.17 at the prices of 10/11/2026) committed with the code. The audit log of both decisions, the other half of this task, was done in Part 3.
 
 ## Handoff (every 3 parts)
 
