@@ -29,6 +29,8 @@ This document lists the controls of the prototype and separates what the code en
 | A draft with sensitive data, an action claim, no text or too much text is discarded | `check_draft()` | `test_unacceptable_drafts_are_replaced_by_the_handoff_message` |
 | Nothing is sent without an explicit yes | `request_approval()` | `test_only_an_explicit_yes_sends` |
 | The agent audit log keeps both decisions | `write_agent_audit_log()` | `test_audit_log_records_both_decisions_and_is_redacted` |
+| A ticket that tries to instruct the agent is a blocked Security Incident | `detect_prompt_injection()`, `classify_ticket()` | `test_injection_makes_the_ticket_a_blocked_security_incident`, `test_rules_with_injection_detection` |
+| Legitimate tickets that share words with the patterns are not flagged | `INJECTION_PATTERNS` | `test_negatives`, `test_no_sample_or_non_injection_evaluation_ticket_is_flagged` |
 | The requester's name is not sent to the API | `build_user_message()` | `test_requester_name_is_not_sent` |
 | Sensitive values are masked before the API call (classification and reply draft) | `masked_ticket_block()`, `redact_text()` | `test_no_value_found_by_the_patterns_reaches_the_client`, `test_known_values_never_reach_the_client_on_classification_or_draft` |
 | The prompt is not tuned to the evaluation tickets | `prompts/classify_v2.md` | `test_v2_is_not_tuned_to_evaluation_tickets` |
@@ -47,7 +49,7 @@ This document lists the controls of the prototype and separates what the code en
 | Asking the requester for missing information | Not implemented. An incomplete ticket goes to a person. |
 | Telling the requester that a response is automated | Not implemented. |
 | Masking of values the patterns do not recognise | Not implemented. Masking uses the same patterns as detection, so an unrecognised value is still sent. |
-| Prompt-injection defence beyond the guardrail | Not implemented. The ticket is wrapped as data, and five injection tickets are in the evaluation set. |
+| Prompt-injection defence beyond pattern matching and the guardrail | Not implemented. The patterns miss spaced, encoded, look-alike and non-English evasions (`docs/injection-detection.md`), and the held-out set was written by the author of the patterns. |
 | Log retention and access control | Local files, with no rotation and no access control. |
 
 ## What the agent must never do

@@ -62,7 +62,7 @@ class Guardrail(unittest.TestCase):
         """Exhaustive: for every evaluation and sample ticket the rules block, no LLM answer allows automation."""
         tickets = [item.ticket for item in e.load_eval_set()] + list(p.SAMPLE_TICKETS)
         blocked = [p.analyze_ticket(t) for t in tickets if not p.analyze_ticket(t).automation_allowed]
-        self.assertEqual(len(blocked), 22)
+        self.assertEqual(len(blocked), 26)
         answers = [llm(cat, pri, sens) for cat, pri, sens in
                    itertools.product(e.CATEGORIES, e.PRIORITIES, (False, True))] + [llm("", "", ok=False)]
         for rules in blocked:

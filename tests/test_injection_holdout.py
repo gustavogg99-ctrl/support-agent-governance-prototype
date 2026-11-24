@@ -8,10 +8,11 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO / "src"))
+sys.path[:0] = [str(REPO / "src"), str(REPO / "tests")]
 
 import eval_set as e  # noqa: E402
 import prototype as p  # noqa: E402
+from fakes import without_injection_detection  # noqa: E402
 
 HOLDOUT_FILE = REPO / "data" / "injection_holdout.jsonl"
 # Pinned on purpose: the detection code (AGENT-V2-05) must be written without changing these tickets.
@@ -58,8 +59,9 @@ class HeldOutSet(unittest.TestCase):
             self.assertIn(item.ticket.subject, DOC)
 
     def test_rules_baseline_before_detection_code(self) -> None:
-        """The numbers in the documentation. AGENT-V2-05 changes them on purpose and updates both together."""
-        analyses = [p.analyze_ticket(i.ticket) for i in ITEMS]
+        """The reference numbers in the documentation: the rules as they were when this file was written."""
+        with without_injection_detection():
+            analyses = [p.analyze_ticket(i.ticket) for i in ITEMS]
         self.assertEqual(sum(a.category == "Security Incident" for a in analyses), 0)
         self.assertEqual(sum(a.priority == "High" for a in analyses), 0)
         unsafe = [i.ticket.ticket_id for i, a in zip(ITEMS, analyses) if a.automation_allowed]
@@ -68,6 +70,17 @@ class HeldOutSet(unittest.TestCase):
         self.assertIn("| Priority correct (High) | 0 / 10 |", DOC)
         self.assertIn("| Unsafe automation: label requires a person, rules allowed an automated response | 6 / 10 |", DOC)
 
+    def test_rules_with_injection_detection(self) -> None:
+        analyses = [p.analyze_ticket(i.ticket) for i in ITEMS]
+        for item, analysis in zip(ITEMS, analyses):
+            with self.subTest(ticket=item.ticket.ticket_id):
+                self.assertEqual((analysis.category, analysis.priority), ("Security Incident", "High"))
+                self.assertFalse(analysis.automation_allowed)
+                self.assertTrue(analysis.human_escalation_required)
+                self.assertTrue(analysis.prompt_injection_signals)
+        self.assertIn("| Category correct (Security Incident) | 0 / 10 | 10 / 10 |", DOC)
+        self.assertIn("| Priority correct (High) | 0 / 10 | 10 / 10 |", DOC)
+        self.assertIn("| Unsafe automation | 6 / 10 | 0 / 10 |", DOC)
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,7 +21,7 @@ Ticket received
 ↓
 1. Sensitive data detection        detect_sensitive_data()
 ↓
-2. Ticket classification           classify_ticket()
+2. Ticket classification           classify_ticket()  (prompt-injection check first)
 ↓
 3. Priority assignment             assign_priority()
 ↓
@@ -64,6 +64,7 @@ If any type is detected, the ticket is flagged and the detected types are record
 
 | Order | Category | Trigger keywords (examples) |
 |---|---|---|
+| 0 | Security Incident | the ticket tries to instruct the triage agent: `detect_prompt_injection()` finds one of seven techniques (override, addressed to the agent, fake system marker, dictated output, decision control, prompt extraction, authority claim). See `docs/injection-detection.md` |
 | 1 | Security Incident | phishing, suspicious, malware, security, breach, exposed password, my password is, credential(s), compromised |
 | 2 | Access Request | grant access, request access, permission, shared folder, restricted folder |
 | 3 | Access Support | password reset, forgot my password, senha, login, access issue, cannot access |
@@ -181,7 +182,7 @@ Summary: 10 processed, 6 escalated, 4 allowed, 6 blocked, 3 with sensitive data.
 
 ## 11. Limitations
 
-- Keyword matching, not natural language understanding or a machine learning model.
+- Keyword matching, not natural language understanding or a machine learning model. Prompt-injection detection is pattern based and misses spaced, encoded, look-alike and non-English evasions (`docs/injection-detection.md`).
 - Sensitive data detection covers a small set of patterns and can produce false positives and false negatives.
 - The phone pattern matches any run of 8 or 9 digits, so an order number or a date written as `20261110` is flagged and the ticket goes to a person. It is left broad on purpose: a narrower pattern would stop detecting a phone number typed without separators, and the rules may only err towards caution.
 - No confidence score: ambiguity is inferred only from the absence of a keyword match.

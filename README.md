@@ -76,7 +76,8 @@ What the per-ticket records show (detail in `docs/evaluation-run.md`):
 - One run per combination. LLM output is not deterministic and variance was not measured.
 - Prompt `v2` was written from the same policy that produced the labels. The result shows that the model follows a policy when it is stated, not how it would perform on real tickets. No prompt was tuned on the evaluation tickets.
 - Only classification was evaluated. Reply drafts and latency were not.
-- Five injection tickets are a sample, not a security assessment. The ticket text is wrapped as data and the guardrail limits the damage, but a full prompt-injection defence is not implemented.
+- The results table, including the "Rules only" row, was produced **before** the rules detected prompt injection. Since then `detect_prompt_injection()` classifies tickets that try to instruct the agent as Security Incidents (`docs/injection-detection.md`): the rules alone now get 14/30 categories and 4/21 unsafe automations on the same 30 tickets (9/30 and 8/21 before), and all 10 held-out injection tickets of `docs/injection-holdout.md`. Those 10 were written by the same author as the patterns, so this is not a measure of how it would hold against someone else. It misses spaced, encoded, look-alike and non-English evasions, listed in the document. How the LLM prompts behave with the new rules is not measured until a new run.
+- Five injection tickets are a sample, not a security assessment. The ticket text is wrapped as data and the guardrail limits the damage; the pattern-based detection is not a full prompt-injection defence.
 - The results above predate masking: that run sent the ticket text as written (only the requester's name was left out). Masking is implemented and tested, but its effect on accuracy is not measured until a new run. Masking uses the same patterns as detection, so a value they do not recognise (for example a password written without a disclosure phrase, such as `reset it to 12345`) is still sent.
 - Human approval is a console prompt, and sending is simulated.
 
@@ -138,7 +139,8 @@ A local prototype, not a production system. There is no authentication, no ticke
 - `docs/guardrail.md`: how the rules and the LLM are combined, the draft checks and human approval.
 - `docs/llm-classifier.md`: the classifier, its prompt versions and why the output is validated locally.
 - `docs/evaluation-set.md`: the 30 labelled tickets, the labelling policy and the rules-only baseline.
-- `docs/injection-holdout.md`: the 10 held-out injection tickets, their labels and the rules-only baseline on them.
+- `docs/injection-holdout.md`: the 10 held-out injection tickets, their labels and the rules-only result on them, before and after the detection.
+- `docs/injection-detection.md`: the threat model, the seven techniques the rules detect, what they miss, and how they were measured.
 - `docs/evaluation-run.md`: how the evaluation runs, the results of 2026-11-10 and their limits.
 - `docs/governance-controls.md`: each control, where it is enforced and which test pins it.
 - `docs/architecture.md`: modules, data flow and what a production version would need.
