@@ -121,6 +121,7 @@ src/eval_set.py         evaluation set loader and rules-only baseline
 src/evaluate.py         evaluation harness (prompts x models) and results table
 prompts/                versioned prompts compared by the evaluation
 data/eval_tickets.jsonl 30 labelled synthetic tickets
+data/injection_holdout.jsonl 10 held-out injection tickets, frozen before any detection code
 results/                the committed evaluation run behind every published number
 tests/                  unittest suite, standard library only
 scripts/                make_demo_gif.py, renders assets/demo.gif (needs Pillow)
@@ -137,6 +138,7 @@ A local prototype, not a production system. There is no authentication, no ticke
 - `docs/guardrail.md`: how the rules and the LLM are combined, the draft checks and human approval.
 - `docs/llm-classifier.md`: the classifier, its prompt versions and why the output is validated locally.
 - `docs/evaluation-set.md`: the 30 labelled tickets, the labelling policy and the rules-only baseline.
+- `docs/injection-holdout.md`: the 10 held-out injection tickets, their labels and the rules-only baseline on them.
 - `docs/evaluation-run.md`: how the evaluation runs, the results of 2026-11-10 and their limits.
 - `docs/governance-controls.md`: each control, where it is enforced and which test pins it.
 - `docs/architecture.md`: modules, data flow and what a production version would need.
