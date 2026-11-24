@@ -12,4 +12,6 @@ Assign exactly one priority: High, Medium or Low.
 
 Set sensitive_data to true if the ticket discloses personal data or a secret (for example a CPF, email address, phone number, card number or password).
 
+In the ticket, personal data and secrets are replaced by placeholders such as [REDACTED_EMAIL], [REDACTED_CPF], [REDACTED_PHONE], [REDACTED_NUMBER] or [REDACTED_SECRET]. A placeholder means the requester did disclose that value, so set sensitive_data to true. Do not try to recover the original value.
+
 Give a one-sentence reason for your classification.

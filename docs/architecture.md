@@ -53,7 +53,7 @@ The rules pipeline inside `prototype.py` is described step by step in `docs/deci
 
 - **Input:** synthetic tickets, in code (`SAMPLE_TICKETS`) and in `data/eval_tickets.jsonl`.
 - **Rules only:** everything runs in memory on the local machine, with no network call.
-- **Agent and evaluation:** the ticket subject and description are sent to the Anthropic API as written. The requester's name is not sent. Masking sensitive values before the call is not implemented.
+- **Agent and evaluation:** the ticket subject and description are sent to the Anthropic API after `redact_text()`, so recognised values become placeholders. The requester's name is not sent. A value the patterns do not recognise is still sent.
 - **Output:** terminal output (not redacted, local only); `audit_log.jsonl` and `agent_audit_log.jsonl` with redacted ticket text, both git-ignored; `results/eval_results.json` for evaluation runs, which is committed.
 - **Retention:** the logs are appended on every run and never rotated. A production system would need a retention policy.
 
@@ -65,7 +65,7 @@ The rules pipeline inside `prototype.py` is described step by step in `docs/deci
 | Classification | Keyword rules plus an LLM, combined by the guardrail | The same split, measured on real tickets with more than one run |
 | Rules | In code | Versioned policy configuration with change control |
 | Human review | A console prompt | An approval workflow with an analyst queue |
-| Sensitive data | Regular expressions | Data-loss-prevention tooling, and masking before any API call |
+| Sensitive data | Regular expressions | Data-loss-prevention tooling, which also covers what the patterns miss |
 | Audit log | Local files | Central, access-controlled, tamper-evident logging |
 | Identity | None | Authentication and role-based access |
 | Monitoring | None | Escalation rate, disagreement rate and cost over time |

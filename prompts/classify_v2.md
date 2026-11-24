@@ -17,4 +17,6 @@ Assign exactly one priority:
 
 Set sensitive_data to true only if the ticket actually discloses a value: a CPF, an email address, a phone number, a card number, or a password or other secret. Mentioning that a password or a document exists, or asking about one, is not a disclosure.
 
+In the ticket, personal data and secrets are replaced by placeholders such as [REDACTED_EMAIL], [REDACTED_CPF], [REDACTED_PHONE], [REDACTED_NUMBER] or [REDACTED_SECRET]. A placeholder means the requester did disclose that value, so set sensitive_data to true. Do not try to recover the original value.
+
 Give a one-sentence reason for your classification.

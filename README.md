@@ -39,7 +39,7 @@ What the agent may do, what happens to personal data and what is logged. Each co
 **Personal data**
 
 - Sensitive values (email addresses, phone numbers, CPF-like and card-like numbers, and secrets such as `password: value`) are detected by the rules, raise the priority and block automation in any category.
-- The requester's name is not sent to the API. The rest of the ticket text is sent as written: masking before the call is not implemented (see [Limitations](#limitations-of-these-results)).
+- The requester's name is not sent to the API, and the subject and description go through `redact_text()` first, so the API client receives placeholders (`[REDACTED_EMAIL]`, `[REDACTED_CPF]`, `[REDACTED_PHONE]`, `[REDACTED_NUMBER]`, `[REDACTED_SECRET]`) instead of the values. The rules keep reading the raw text locally. The results table below was produced **before** masking existed and is not valid for the current code until a new run replaces it (see [Limitations](#limitations-of-these-results)).
 - All data in this repository is synthetic.
 
 **Logs**
@@ -77,7 +77,7 @@ What the per-ticket records show (detail in `docs/evaluation-run.md`):
 - Prompt `v2` was written from the same policy that produced the labels. The result shows that the model follows a policy when it is stated, not how it would perform on real tickets. No prompt was tuned on the evaluation tickets.
 - Only classification was evaluated. Reply drafts and latency were not.
 - Five injection tickets are a sample, not a security assessment. The ticket text is wrapped as data and the guardrail limits the damage, but a full prompt-injection defence is not implemented.
-- The ticket text is sent to the API as written (only the requester's name is left out). Masking sensitive values before the call is not implemented.
+- The results above predate masking: that run sent the ticket text as written (only the requester's name was left out). Masking is implemented and tested, but its effect on accuracy is not measured until a new run. Masking uses the same patterns as detection, so a value they do not recognise (for example a password written without a disclosure phrase, such as `reset it to 12345`) is still sent.
 - Human approval is a console prompt, and sending is simulated.
 
 ## Running it

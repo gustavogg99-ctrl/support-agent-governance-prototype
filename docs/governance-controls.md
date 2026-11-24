@@ -30,6 +30,7 @@ This document lists the controls of the prototype and separates what the code en
 | Nothing is sent without an explicit yes | `request_approval()` | `test_only_an_explicit_yes_sends` |
 | The agent audit log keeps both decisions | `write_agent_audit_log()` | `test_audit_log_records_both_decisions_and_is_redacted` |
 | The requester's name is not sent to the API | `build_user_message()` | `test_requester_name_is_not_sent` |
+| Sensitive values are masked before the API call (classification and reply draft) | `masked_ticket_block()`, `redact_text()` | `test_no_value_found_by_the_patterns_reaches_the_client`, `test_known_values_never_reach_the_client_on_classification_or_draft` |
 | The prompt is not tuned to the evaluation tickets | `prompts/classify_v2.md` | `test_v2_is_not_tuned_to_evaluation_tickets` |
 | Published numbers match the committed run | `results/eval_results.json` | `PublishedResults` in `tests/test_evaluate.py` |
 | Runtime logs and local secrets stay out of version control | `.gitignore` | none |
@@ -45,7 +46,7 @@ This document lists the controls of the prototype and separates what the code en
 | Detection of requests outside the approved scope | Only for access requests. |
 | Asking the requester for missing information | Not implemented. An incomplete ticket goes to a person. |
 | Telling the requester that a response is automated | Not implemented. |
-| Masking sensitive values before the API call | Not implemented. Only the requester's name is left out. |
+| Masking of values the patterns do not recognise | Not implemented. Masking uses the same patterns as detection, so an unrecognised value is still sent. |
 | Prompt-injection defence beyond the guardrail | Not implemented. The ticket is wrapped as data, and five injection tickets are in the evaluation set. |
 | Log retention and access control | Local files, with no rotation and no access control. |
 
