@@ -1,0 +1,28 @@
+flowchart TD
+    T["Ticket<br/>(synthetic data)"] --> R["Rules<br/>src/prototype.py<br/>category, priority, sensitive data"]
+    T --> L["LLM classifier<br/>src/llm_classifier.py<br/>JSON validated locally"]
+    R --> G["Guardrail<br/>combine() in src/agent.py"]
+    L --> G
+    G -- "person must review" --> H["Fixed handoff message<br/>no draft · a person decides<br/>(rules escalate or block, invalid LLM answer,<br/>disagreement, or LLM requires review)"]
+    G -- "agree on a<br/>low-risk case" --> D["LLM drafts a reply"]
+    D --> C["check_draft()<br/>sensitive data, action<br/>claims, length"]
+    C -- "fails" --> H
+    C -- "passes" --> A["A person<br/>types yes?"]
+    A -- "yes" --> S["Simulated send<br/>nothing is really sent"]
+    A -- "anything else" --> X["Rejected"]
+    H --> LOG[("agent_audit_log.jsonl<br/>both decisions, redacted")]
+    S --> LOG
+    X --> LOG
+
+    classDef rules fill:#e8eefc,stroke:#3b5bdb,color:#1b2a5c
+    classDef llm fill:#f3e8fd,stroke:#7b3fc4,color:#3a1760
+    classDef guard fill:#fff4d6,stroke:#c98a00,color:#5c3d00
+    classDef person fill:#fde8e8,stroke:#c0392b,color:#5c1a14
+    classDef ok fill:#e3f6e8,stroke:#2f8f4e,color:#12391f
+    classDef log fill:#eeeeee,stroke:#666,color:#222
+    class T,R rules
+    class L,D llm
+    class G,C guard
+    class H,X person
+    class A,S ok
+    class LOG log
