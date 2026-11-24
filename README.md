@@ -25,6 +25,29 @@ The guardrail (`combine()` in `src/agent.py`) sends a ticket to a person when an
 
 The rules are in `docs/decision-logic.md`, the guardrail and the draft checks in `docs/guardrail.md`, and the classifier in `docs/llm-classifier.md`.
 
+## Guardrails
+
+What the agent may do, what happens to personal data and what is logged. Each control below names the test that pins it in `docs/governance-controls.md`.
+
+**Limits of the agent**
+
+- The only automated action is a reply, and only when the rules and the LLM agree on a low-risk ticket. Security incidents, access requests, unclassified tickets, sensitive data and High priority always go to a person.
+- A reply draft is discarded, and the fixed handoff message used instead, if it is empty or over 1,200 characters, contains sensitive data, or claims an action was performed ("I have reset…", "foi liberado…"). The action-claim check is a keyword heuristic in English and Portuguese, not a guarantee.
+- Nothing is sent without an explicit `yes`/`sim`; anything else rejects. Sending is simulated.
+- The agent has no integration that could approve access, reset a password, close an incident or change a system or account.
+
+**Personal data**
+
+- Sensitive values (email addresses, phone numbers, CPF-like and card-like numbers, and secrets such as `password: value`) are detected by the rules, raise the priority and block automation in any category.
+- The requester's name is not sent to the API. The rest of the ticket text is sent as written: masking before the call is not implemented (see [Limitations](#limitations-of-these-results)).
+- All data in this repository is synthetic.
+
+**Logs**
+
+- `audit_log.jsonl` (rules only) and `agent_audit_log.jsonl` (agent) get one line per ticket with the decision and its reasons. The agent log keeps both decisions, the disagreements, the draft and the human outcome.
+- Ticket text and LLM output are redacted with the same pattern table used for detection before they are written.
+- Both logs are git-ignored and never committed. They are local files with no rotation or access control.
+
 ## Results
 
 The table compares the rules alone with two models (Claude Haiku 5.5 and Claude Sonnet 5.5) and two prompt versions (`v1` minimal, `v2` with the written policy), on the 30 labelled synthetic tickets. It is generated from `results/eval_results.json`, and a test checks that this README contains exactly that table. Prices are those stored in the results file, checked on 2026-11-10.
