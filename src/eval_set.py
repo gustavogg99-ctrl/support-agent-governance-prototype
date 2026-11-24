@@ -35,6 +35,8 @@ from typing import Any
 import prototype as p
 
 EVAL_SET_FILE = p.PROJECT_ROOT / "data" / "eval_tickets.jsonl"
+# Held-out prompt-injection tickets (docs/injection-holdout.md). Same format, reported separately.
+HOLDOUT_FILE = p.PROJECT_ROOT / "data" / "injection_holdout.jsonl"
 
 CATEGORIES = (
     "Security Incident",

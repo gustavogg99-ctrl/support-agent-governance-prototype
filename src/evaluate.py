@@ -14,6 +14,11 @@ model, and measures:
 - unnecessary review: the label allows automation but a person was asked;
 - cost, computed from the tokens the API reports.
 
+The 10 held-out prompt-injection tickets (data/injection_holdout.jsonl) are run through the
+same combinations but reported **separately**, in their own section and table: the
+30-ticket numbers stay comparable with the published run, and the held-out file is
+never mixed into them.
+
 Only classification is evaluated. Reply drafts are not part of this run.
 
 Tests never call the API (they use a scripted client). A real run happens on
@@ -43,6 +48,7 @@ from agent import TriageDecision, triage
 from eval_set import (
     EVAL_SET_FILE,
     GROUPS,
+    HOLDOUT_FILE,
     EvalTicket,
     load_eval_set,
     policy_requires_review,
@@ -214,22 +220,21 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def build_report(
+def _run_combinations(
     items: list[EvalTicket],
     client: LLMClient,
-    effort: str = DEFAULT_EFFORT,
-    models: tuple[str, ...] = MODELS,
-    prompt_versions: tuple[str, ...] = PROMPT_VERSIONS,
-    progress: Callable[[str], None] = lambda message: None,
-) -> dict[str, Any]:
-    """Run every prompt version x model combination and return a JSON-serialisable report."""
+    models: tuple[str, ...],
+    prompt_versions: tuple[str, ...],
+    progress: Callable[[str], None],
+    label: str,
+) -> list[dict[str, Any]]:
     runs = []
     for model in models:
         for prompt_version in prompt_versions:
             rows = evaluate_combination(items, client, model, prompt_version)
             summary = summarize(rows, model)
             progress(
-                f"{model} / {prompt_version}: category {summary['category_correct']}/{summary['tickets']}, "
+                f"{label}{model} / {prompt_version}: category {summary['category_correct']}/{summary['tickets']}, "
                 f"invalid {summary['llm_invalid']}, unsafe {summary['unsafe_automation']}, "
                 f"cost US$ {summary['cost_usd']:.4f}"
             )
@@ -239,8 +244,27 @@ def build_report(
                 "summary": summary,
                 "tickets": [row_to_dict(row) for row in rows],
             })
+    return runs
 
-    return {
+
+def build_report(
+    items: list[EvalTicket],
+    client: LLMClient,
+    effort: str = DEFAULT_EFFORT,
+    models: tuple[str, ...] = MODELS,
+    prompt_versions: tuple[str, ...] = PROMPT_VERSIONS,
+    progress: Callable[[str], None] = lambda message: None,
+    holdout_items: list[EvalTicket] | None = None,
+    holdout_file: Path = HOLDOUT_FILE,
+) -> dict[str, Any]:
+    """Run every prompt version x model combination and return a JSON-serialisable report.
+
+    `holdout_items`, when given, are run through the same combinations and reported under the
+    separate key "holdout"; `meta.tickets`, `runs` and `rules_baseline` always describe `items` only.
+    """
+    runs = _run_combinations(items, client, models, prompt_versions, progress, "")
+
+    report: dict[str, Any] = {
         "meta": {
             "run_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "tickets": len(items),
@@ -259,6 +283,20 @@ def build_report(
         "rules_baseline": summarize_rules(run_rules_baseline(items)),
         "runs": runs,
     }
+
+    if holdout_items is not None:
+        report["holdout"] = {
+            "tickets": len(holdout_items),
+            "sha256": _sha256(holdout_file),
+            "rules_baseline": summarize_rules(run_rules_baseline(holdout_items)),
+            "runs": _run_combinations(holdout_items, client, models, prompt_versions, progress, "held-out "),
+        }
+    return report
+
+
+def all_runs(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every run in the report: the evaluation set and, when present, the held-out set."""
+    return [*report["runs"], *report.get("holdout", {}).get("runs", [])]
 
 
 def format_markdown_table(report: dict[str, Any]) -> str:
@@ -287,6 +325,37 @@ def format_markdown_table(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def format_holdout_table(report: dict[str, Any]) -> str:
+    """Table of the held-out injection tickets (ASCII only). Empty string if the report has none.
+
+    Every held-out ticket requires a person, so "unnecessary review" is always 0 and is left out.
+    """
+    holdout = report.get("holdout")
+    if holdout is None:
+        return ""
+    total = holdout["tickets"]
+    header = (
+        "| Classifier | Category | Priority | Invalid LLM output | Rules-LLM disagreements | "
+        "Unsafe automation, LLM alone | Unsafe automation, with guardrail | Cost per ticket (US$) |"
+    )
+    lines = [header, "|" + "---|" * 8]
+
+    baseline = holdout["rules_baseline"]
+    lines.append(
+        f"| Rules only | {baseline['category_correct']}/{total} | {baseline['priority_correct']}/{total} | - | - | "
+        f"- | {baseline['unsafe_automation']}/{baseline['review_required']} | 0 |"
+    )
+    for run in holdout["runs"]:
+        s = run["summary"]
+        lines.append(
+            f"| {run['model']} / prompt {run['prompt_version']} | {s['category_correct']}/{total} | "
+            f"{s['priority_correct']}/{total} | {s['llm_invalid']} | {s['disagreements']} | "
+            f"{s['unsafe_automation_llm_alone']}/{s['review_required']} | "
+            f"{s['unsafe_automation']}/{s['review_required']} | {s['cost_per_ticket_usd']:.5f} |"
+        )
+    return "\n".join(lines)
+
+
 def main(arguments: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate the LLM triage (prompts x models) on the evaluation set.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="where to write the results JSON")
@@ -294,7 +363,11 @@ def main(arguments: list[str] | None = None) -> int:
     args = parser.parse_args(arguments)
 
     if args.table is not None:
-        print(format_markdown_table(json.loads(args.table.read_text(encoding="utf-8"))))
+        saved = json.loads(args.table.read_text(encoding="utf-8"))
+        print(format_markdown_table(saved))
+        if "holdout" in saved:
+            print("\nHeld-out injection tickets (reported separately):\n")
+            print(format_holdout_table(saved))
         return 0
 
     try:
@@ -304,11 +377,14 @@ def main(arguments: list[str] | None = None) -> int:
         return 2
 
     items = load_eval_set()
-    calls = len(items) * len(MODELS) * len(PROMPT_VERSIONS)
-    print(f"{len(items)} tickets x {len(MODELS)} models x {len(PROMPT_VERSIONS)} prompts = {calls} API calls.")
-    report = build_report(items, client, progress=print)
+    holdout_items = load_eval_set(HOLDOUT_FILE)
+    combinations = len(MODELS) * len(PROMPT_VERSIONS)
+    calls = (len(items) + len(holdout_items)) * combinations
+    print(f"{len(items)} tickets + {len(holdout_items)} held-out tickets x {len(MODELS)} models x "
+          f"{len(PROMPT_VERSIONS)} prompts = {calls} API calls.")
+    report = build_report(items, client, progress=print, holdout_items=holdout_items)
 
-    failed = [r for r in report["runs"] if is_fully_failed(r["summary"])]
+    failed = [r for r in all_runs(report) if is_fully_failed(r["summary"])]
     if failed:
         print("Every call failed at the API in: "
               + ", ".join(f"{r['model']}/{r['prompt_version']}" for r in failed)
@@ -317,9 +393,11 @@ def main(arguments: list[str] | None = None) -> int:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    total_cost = sum(r["summary"]["cost_usd"] for r in report["runs"])
+    total_cost = sum(r["summary"]["cost_usd"] for r in all_runs(report))
     print()
     print(format_markdown_table(report))
+    print("\nHeld-out injection tickets (reported separately):\n")
+    print(format_holdout_table(report))
     print(f"\nTotal cost of this run: US$ {total_cost:.4f}")
     print(f"Results written to {args.output}")
     return 0
