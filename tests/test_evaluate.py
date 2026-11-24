@@ -27,13 +27,14 @@ import llm_classifier as c  # noqa: E402
 from fakes import classification_json  # noqa: E402
 
 ITEMS = e.load_eval_set()
+HOLDOUT = e.load_eval_set(e.HOLDOUT_FILE)
 
 
 class OracleClient:
     """Answers every ticket with its own label: a perfect classifier."""
 
     def complete(self, *, model, system, user, schema):
-        item = next(i for i in ITEMS if c.masked_ticket_block(i.ticket) in user)
+        item = next(i for i in ITEMS + HOLDOUT if c.masked_ticket_block(i.ticket) in user)
         x = item.expected
         return c.LLMResponse(text=classification_json(x.category, x.priority, x.sensitive_data),
                              input_tokens=1000, output_tokens=100, stop_reason="end_turn")
@@ -192,6 +193,123 @@ class CommandLine(unittest.TestCase):
             self.assertEqual(code, 0)
             saved = json.loads(target.read_text(encoding="utf-8"))
         self.assertEqual(len(saved["runs"]), 4)
+        self.assertEqual(len(saved["holdout"]["runs"]), 4)
+
+    def test_a_run_where_every_held_out_call_failed_is_not_written(self) -> None:
+        """The check covers the held-out runs too: only they fail here, the 30-ticket runs are fine."""
+        class FailsOnHoldout(OracleClient):
+            def complete(self, *, model, system, user, schema):
+                if any(c.masked_ticket_block(i.ticket) in user for i in HOLDOUT):
+                    raise c.LLMError("AuthenticationError")
+                return super().complete(model=model, system=system, user=user, schema=schema)
+
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "results.json"
+            with mock.patch.object(ev, "AnthropicClient", return_value=FailsOnHoldout()), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                code = ev.main(["--output", str(target)])
+            self.assertEqual(code, 1)
+            self.assertFalse(target.exists())
+
+    def test_the_call_count_announced_includes_the_held_out_tickets(self) -> None:
+        output = io.StringIO()
+        with mock.patch.object(ev, "AnthropicClient", return_value=OracleClient()), \
+                tempfile.TemporaryDirectory() as folder, contextlib.redirect_stdout(output):
+            ev.main(["--output", str(Path(folder) / "results.json")])
+        self.assertIn("30 tickets + 10 held-out tickets x 2 models x 2 prompts = 160 API calls.", output.getvalue())
+
+
+class HeldOut(unittest.TestCase):
+    """The 10 held-out injection tickets are measured in their own section and never mixed into the 30."""
+
+    def setUp(self) -> None:
+        self.report = ev.build_report(ITEMS, OracleClient(), holdout_items=HOLDOUT)
+
+    def test_main_numbers_are_unchanged_by_the_held_out_set(self) -> None:
+        plain = ev.build_report(ITEMS, OracleClient())
+        self.assertEqual(self.report["meta"]["tickets"], 30)
+        self.assertEqual(self.report["rules_baseline"], plain["rules_baseline"])
+        for with_holdout, without in zip(self.report["runs"], plain["runs"]):
+            self.assertEqual(with_holdout["summary"], without["summary"])
+            self.assertEqual(len(with_holdout["tickets"]), 30)
+        self.assertEqual(ev.format_markdown_table(self.report), ev.format_markdown_table(plain))
+
+    def test_holdout_section_has_ten_tickets_per_combination_and_its_hash(self) -> None:
+        holdout = self.report["holdout"]
+        self.assertEqual(holdout["tickets"], 10)
+        self.assertEqual(holdout["sha256"], ev._sha256(e.HOLDOUT_FILE))
+        self.assertEqual(len(holdout["runs"]), 4)
+        for run in holdout["runs"]:
+            self.assertEqual(run["summary"]["tickets"], 10)
+            self.assertEqual([t["ticket_id"] for t in run["tickets"]], [i.ticket.ticket_id for i in HOLDOUT])
+        json.dumps(self.report, ensure_ascii=False)
+
+    def test_no_held_out_ticket_leaks_into_the_main_runs(self) -> None:
+        held_out_ids = {i.ticket.ticket_id for i in HOLDOUT}
+        for run in self.report["runs"]:
+            self.assertFalse(held_out_ids & {t["ticket_id"] for t in run["tickets"]})
+
+    def test_holdout_rules_baseline_is_the_pinned_one(self) -> None:
+        """docs/injection-holdout.md: with detection, the rules get 10/10 and allow no automation."""
+        baseline = self.report["holdout"]["rules_baseline"]
+        self.assertEqual((baseline["category_correct"], baseline["priority_correct"]), (10, 10))
+        self.assertEqual((baseline["review_required"], baseline["unsafe_automation"]), (10, 0))
+
+    def test_every_held_out_label_requires_a_person(self) -> None:
+        for run in self.report["holdout"]["runs"]:
+            self.assertEqual(run["summary"]["review_required"], 10)
+            self.assertEqual(run["summary"]["unnecessary_review"], 0)
+
+    def test_naive_llm_alone_would_automate_everything_and_the_guardrail_stops_it(self) -> None:
+        """A classifier that calls every ticket a low service request: 10 of 10 unsafe alone, 0 with the rules."""
+        client = FixedClient(classification_json("Service Request", "Low", False))
+        report = ev.build_report(ITEMS, client, holdout_items=HOLDOUT)
+        for run in report["holdout"]["runs"]:
+            s = run["summary"]
+            self.assertEqual((s["unsafe_automation_llm_alone"], s["unsafe_automation"]), (10, 0))
+
+    def test_without_the_detection_the_same_naive_llm_gets_through_the_rules(self) -> None:
+        """What the detection is worth on the held-out set. The old rules allowed 6 of these tickets; a naive LLM
+        that agrees with them (Service Request, Low) gets 4 through. The other 2 (INJ-002, INJ-010) were stopped
+        only because the rules and the LLM disagreed."""
+        from fakes import without_injection_detection
+
+        client = FixedClient(classification_json("Service Request", "Low", False))
+        with without_injection_detection():
+            report = ev.build_report(ITEMS, client, holdout_items=HOLDOUT)
+        for run in report["holdout"]["runs"]:
+            unsafe = [t["ticket_id"] for t in run["tickets"] if t["flags"]["unsafe_automation"]]
+            self.assertEqual(unsafe, ["INJ-003", "INJ-004", "INJ-006", "INJ-008"])
+
+    def test_holdout_table_has_baseline_and_four_runs_and_is_ascii(self) -> None:
+        lines = ev.format_holdout_table(self.report).splitlines()
+        self.assertEqual(len(lines), 2 + 1 + 4)
+        self.assertTrue(lines[2].startswith("| Rules only | 10/10 | 10/10 | - | - | - | 0/10 | 0 |"))
+        self.assertTrue(all(line.isascii() for line in lines))
+        self.assertEqual(lines[0].count("|"), lines[3].count("|"))
+
+    def test_holdout_table_is_empty_for_a_report_without_the_section(self) -> None:
+        self.assertEqual(ev.format_holdout_table(SAVED), "")
+
+    def test_table_mode_prints_the_held_out_table_when_the_saved_run_has_one(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "run.json"
+            path.write_text(json.dumps(self.report), encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = ev.main(["--table", str(path)])
+        self.assertEqual(code, 0)
+        self.assertIn("Held-out injection tickets", output.getvalue())
+
+    def test_all_runs_covers_both_sets(self) -> None:
+        self.assertEqual(len(ev.all_runs(self.report)), 8)
+        self.assertEqual(len(ev.all_runs(ev.build_report(ITEMS, OracleClient()))), 4)
+
+    def test_progress_marks_the_held_out_combinations(self) -> None:
+        messages: list[str] = []
+        ev.build_report(ITEMS, OracleClient(), progress=messages.append, holdout_items=HOLDOUT)
+        self.assertEqual(len(messages), 8)
+        self.assertEqual(sum(m.startswith("held-out ") for m in messages), 4)
 
 
 REPO = Path(__file__).resolve().parent.parent
