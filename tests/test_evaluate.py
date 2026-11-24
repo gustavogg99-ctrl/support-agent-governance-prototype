@@ -77,19 +77,19 @@ class Metrics(unittest.TestCase):
         """The guardrail is conservative: a disagreement with the rules costs a human review, even if the LLM is right."""
         rows = ev.evaluate_combination(ITEMS, OracleClient(), "claude-haiku-5-5", "v1")
         s = ev.summarize(rows, "claude-haiku-5-5")
-        self.assertEqual(s["disagreements"], 21)
+        self.assertEqual(s["disagreements"], 16)
         self.assertEqual(s["unnecessary_review"], 4)
 
     def test_guardrail_catches_what_a_naive_llm_alone_would_automate(self) -> None:
-        """A classifier that calls everything a low service request: 21 tickets need a person, the rules catch all but 3."""
+        """A classifier that calls everything a low service request: 21 tickets need a person, the rules catch all but 1."""
         client = FixedClient(classification_json("Service Request", "Low", False))
         rows = ev.evaluate_combination(ITEMS, client, "claude-haiku-5-5", "v1")
         s = ev.summarize(rows, "claude-haiku-5-5")
         self.assertEqual(s["review_required"], 21)
         self.assertEqual(s["unsafe_automation_llm_alone"], 21)
-        self.assertEqual(s["unsafe_automation"], 3)
+        self.assertEqual(s["unsafe_automation"], 1)
         unsafe_ids = sorted(r.item.ticket.ticket_id for r in rows if r.unsafe_automation)
-        self.assertEqual(unsafe_ids, ["EVAL-019", "EVAL-027", "EVAL-029"])
+        self.assertEqual(unsafe_ids, ["EVAL-019"])
 
     def test_invalid_output_goes_to_a_person_and_tokens_are_still_billed(self) -> None:
         rows = ev.evaluate_combination(ITEMS, FixedClient("not json"), "claude-sonnet-5-5", "v2")
@@ -136,14 +136,16 @@ class Report(unittest.TestCase):
         self.assertEqual(meta["prices_checked"], ev.PRICES_CHECKED)
 
     def test_report_baseline_is_the_pinned_rules_baseline(self) -> None:
+        """The rules as they are today. The published run (results/eval_results.json) used the rules before
+        injection detection: 9/30, 17/30 and 8 unsafe, reproduced in test_eval_set.RulesBaseline."""
         baseline = self.report["rules_baseline"]
-        self.assertEqual((baseline["category_correct"], baseline["priority_correct"]), (9, 17))
-        self.assertEqual(baseline["unsafe_automation"], 8)
+        self.assertEqual((baseline["category_correct"], baseline["priority_correct"]), (14, 21))
+        self.assertEqual(baseline["unsafe_automation"], 4)
 
     def test_markdown_table_has_baseline_and_four_runs(self) -> None:
         lines = ev.format_markdown_table(self.report).splitlines()
         self.assertEqual(len(lines), 2 + 1 + 4)
-        self.assertTrue(lines[2].startswith("| Rules only | 9/30 | 17/30"))
+        self.assertTrue(lines[2].startswith("| Rules only | 14/30 | 21/30"))
         self.assertTrue(all(line.isascii() for line in lines))
 
     def test_progress_is_reported_per_combination(self) -> None:

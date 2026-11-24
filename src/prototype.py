@@ -16,7 +16,8 @@ from __future__ import annotations
 import json
 import re
 import sys
-from dataclasses import dataclass, asdict
+import unicodedata
+from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,7 @@ class TicketAnalysis:
     automation_allowed: bool
     automation_decision_reason: str
     automated_response: str
+    prompt_injection_signals: list[str] = field(default_factory=list)
 
 
 SAMPLE_TICKETS = [
@@ -142,6 +144,80 @@ def detect_sensitive_data(text: str) -> tuple[bool, list[str]]:
     return bool(detected_types), detected_types
 
 
+# Prompt-injection detection (docs/injection-detection.md). One entry per technique of the threat
+# model. A match means the ticket tries to give the triage agent an instruction, so it is a Security
+# Incident: escalated, High priority, never automated. The patterns err towards caution: a legitimate
+# ticket that happens to match goes to a person, which is the cheap mistake.
+_ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u200e\u200f\u2060\ufeff"))
+_I = re.IGNORECASE
+INJECTION_PATTERNS: dict[str, str] = {
+    # T1: tell the agent to drop what it was told before.
+    "override_instructions": (
+        r"(?i:\b(ignore|ignores|disregard|forget|override|bypass|overrule|desconsidere|desconsiderar|ignorar|"
+        r"esque[cç]a|sobrescreva)\b[^.\n]{0,60}\b(instructions?|rules?|polic(?:y|ies)|guidelines?|prompts?|"
+        r"instru[cç][oõ]es|regras|pol[ií]tica|diretrizes|disseram|told)\b)"
+    ),
+    # T2: a message addressed to the agent, the model or "any AI" instead of to the service desk.
+    "addressed_to_agent": (
+        r"(?i:\b(note|message|instruction|notice)s?\s+(to|for)\s+(the\s+)?(ai|assistant|agent|bot|triage|"
+        r"automat\w+|model|llm)\b"
+        r"|\b(any|every|all)\s+(ai|llm)\s+(assistants?|agents?|models?|bots?)\b"
+        r"|\bas\s+the\s+(it\s+|support\s+|triage\s+|ai\s+)?(bot|agent)\b"
+        r"|\bautomated\s+(triage|classification)\b[^.\n]{0,40}\b(should|must|shall|will|deve|precisa)\b"
+        r"|\b(agente|assistente|modelo)\s+de\s+ia\s*[:,])"
+    ),
+    # T3: fake system or role markers, a tag that closes the ticket, a new identity for the agent.
+    "fake_system_marker": (
+        r"(?:\[/?\s*(?i:system|assistant|admin|developer|instructions?)\s*\]"
+        r"|</?\s*(?i:system|assistant|ticket|instructions?)\s*>"
+        r"|(?-i:\bSYSTEM)\s*:"
+        r"|(?i:\byou\s+are\s+now\s+(the\s+|an?\s+|in\s+)?(admin\w*|root|assistant|developer|dan|unrestricted)\b"
+        r"|\bvoc[eê]\s+agora\s+[eé]\b"
+        r"|\b(new|updated|nova|novas)\s+(instructions?|instru[cç][aã]o|instru[cç][oõ]es)\s+"
+        r"(from|by|do|da|de)\s+(the\s+)?(admin\w*|system|sistema|it\b|ciso|security|seguran[cç]a)))"
+    ),
+    # T4: dictate the agent's output, or use the names of its own output fields.
+    "dictated_output": (
+        r"(?i:\b(respond|reply|answer|output|return|responda|retorne)\s+(only|exactly|apenas|somente)\b"
+        r"|\boutput\s+\{"
+        r"|[\"'](human_review|sensitive_data)[\"']\s*:)"
+        r"|(?is:(?=.*[\"']category[\"']\s*:)(?=.*[\"']priority[\"']\s*:))"
+    ),
+    # T5: set a decision that lowers scrutiny, or tell the agent to skip the person.
+    "decision_control": (
+        r"(?i:\b(classify|classifique|mark|marque|set|define|defina|treat|trate|label|rate)\b[^.\n]{0,60}"
+        r"\b(low(?:est)?\s+priority|priority\s+(?:to\s+|as\s+)?low|prioridade\s+baixa|baixa\s+prioridade|"
+        r"human[\s_-]review\b[^.\n]{0,15}\b(no|false|off|not)\b|no\s+human\s+review|without\s+human\s+review|"
+        r"sem\s+revis[aã]o\s+humana|(?:automation|automa[cç][aã]o)\s+(?:allowed|permitid\w+)|"
+        r"safe\s+(?:to|for)\s+automat\w+|not\s+needing\s+(?:human\s+)?review)"
+        r"|\b(skip|bypass|without)\s+(the\s+)?(human|manual|analyst)\s+review\b"
+        r"|\b(sem|pule|dispense|dispensem)\s+(a\s+|o\s+)?(revis[aã]o|an[aá]lise)\s+(humana|manual|de\s+um\s+analista)\b"
+        r"|\bdo\s+not\s+(forward|send|escalate)\b[^.\n]{0,40}\b(human|analyst|person|pessoa)\b"
+        r"|\b(allow|enable|permit)\s+automation\b)"
+    ),
+    # T6: ask the agent to reveal its own instructions.
+    "prompt_extraction": (
+        r"(?i:\b(print|reveal|show|repeat|display|dump|leak|mostre|revele|exiba|repita)\b[^.\n]{0,40}"
+        r"\b(system\s+prompt|your\s+(?:full\s+|entire\s+|complete\s+)?(?:prompt|instructions)|seu\s+prompt|"
+        r"suas\s+instru[cç][oõ]es|initial\s+instructions)\b)"
+    ),
+    # T7: a claim of authority aimed at the agent, not at the service desk.
+    "authority_claim": (
+        r"(?i:\bnote\s+from\s+the\s+(head\s+of\s+it|ciso|cio|administrator|admin|it\s+director|security\s+team)\b"
+        r"|\b(pre-?approved|already\s+approved|pr[eé]-?aprovad\w+)\b[^.\n]{0,80}"
+        r"\b(skip|bypass|without|no\s+need|sem|dispens\w+)\b)"
+    ),
+}
+_COMPILED_INJECTION = {name: re.compile(pattern) for name, pattern in INJECTION_PATTERNS.items()}
+
+
+def detect_prompt_injection(text: str) -> list[str]:
+    """Names of the injection techniques found in the text. Unicode is normalised and zero-width characters
+    are dropped first, so they cannot split a keyword."""
+    text = unicodedata.normalize("NFKC", text).translate(_ZERO_WIDTH)
+    return [name for name, pattern in _COMPILED_INJECTION.items() if pattern.search(text)]
+
+
 # Checked in order: the first category with a matching keyword wins, so
 # security comes before everything else.
 CATEGORY_KEYWORDS = (
@@ -158,7 +234,10 @@ URGENT_KEYWORDS = ("urgent", "immediately", "critical", "cannot work", "business
 
 
 def classify_ticket(subject: str, description: str) -> str:
-    """Keyword match on subject and description. A ticket that matches nothing is General Support."""
+    """Prompt injection first, then keyword match on subject and description. A ticket that matches nothing
+    is General Support."""
+    if detect_prompt_injection(f"{subject} {description}"):
+        return "Security Incident"
     text = f"{subject} {description}".lower()
     for category, keywords in CATEGORY_KEYWORDS:
         if any(keyword in text for keyword in keywords):
@@ -308,6 +387,7 @@ def analyze_ticket(ticket: Ticket) -> TicketAnalysis:
         automation_allowed=automate,
         automation_decision_reason=automation_reason,
         automated_response=generate_safe_response(ticket, category, priority, automate),
+        prompt_injection_signals=detect_prompt_injection(f"{ticket.subject} {ticket.description}"),
     )
 
 
@@ -321,6 +401,7 @@ def print_analysis(ticket: Ticket, analysis: TicketAnalysis) -> None:
     print(f"Priority: {analysis.priority}")
     print(f"Sensitive Data Detected: {analysis.sensitive_data_detected}")
     print(f"Sensitive Data Types: {', '.join(analysis.sensitive_data_types) or 'None'}")
+    print(f"Prompt Injection Signals: {', '.join(analysis.prompt_injection_signals) or 'None'}")
     print(f"Human Escalation Required: {analysis.human_escalation_required}")
     print(f"Escalation Reason: {analysis.escalation_reason}")
     print(f"Automation Allowed: {analysis.automation_allowed}")

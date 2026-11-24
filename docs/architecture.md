@@ -6,7 +6,7 @@ Five Python modules, run from the command line. The rules, the tests and the res
 
 | Module | Responsibility |
 |---|---|
-| `src/prototype.py` | The deterministic rules: sensitive-data detection, classification, priority, escalation, automation. Also the 10 sample tickets, the fixed response templates, redaction and the rules-only audit log. |
+| `src/prototype.py` | The deterministic rules: sensitive-data detection, prompt-injection detection, classification, priority, escalation, automation. Also the 10 sample tickets, the fixed response templates, redaction and the rules-only audit log. |
 | `src/llm_classifier.py` | Asks the LLM for category, priority and a sensitive-data flag, and validates the JSON locally. Any failure returns `ok=False`. The SDK sits behind the `LLMClient` interface. |
 | `src/agent.py` | The guardrail `combine()`, the reply draft and its checks, human approval, and the agent audit log. |
 | `src/eval_set.py` | Loads and validates `data/eval_tickets.jsonl` and computes the rules-only baseline. |

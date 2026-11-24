@@ -16,9 +16,10 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path[:0] = [str(Path(__file__).resolve().parent.parent / "src"), str(Path(__file__).resolve().parent)]
 
 import eval_set as e  # noqa: E402
+from fakes import without_injection_detection  # noqa: E402
 
 
 VALID_RECORD = {
@@ -75,6 +76,43 @@ class EvalSetFile(unittest.TestCase):
                 self.assertEqual(found, item.expected.sensitive_data)
 
 
+class RulesWithInjectionDetection(unittest.TestCase):
+    """The same 30 tickets with the rules as they are today. Only the 5 injection tickets change."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.rows = e.run_rules_baseline(e.load_eval_set())
+
+    def test_summary(self) -> None:
+        self.assertEqual(
+            e.summarize(self.rows),
+            {
+                "tickets": 30,
+                "category_correct": 14,
+                "priority_correct": 21,
+                "review_required": 21,
+                "unsafe_automation": 4,
+                "unnecessary_review": 3,
+            },
+        )
+
+    def test_only_the_injection_tickets_change(self) -> None:
+        with without_injection_detection():
+            before = {r.ticket_id: (r.analysis.category, r.analysis.priority) for r in e.run_rules_baseline(e.load_eval_set())}
+        changed = [r.ticket_id for r in self.rows if (r.analysis.category, r.analysis.priority) != before[r.ticket_id]]
+        self.assertEqual(changed, ["EVAL-026", "EVAL-027", "EVAL-028", "EVAL-029", "EVAL-030"])
+
+    def test_remaining_unsafe_cases_are_the_incomplete_tickets(self) -> None:
+        self.assertEqual([r.ticket_id for r in self.rows if r.unsafe_automation],
+                         ["EVAL-016", "EVAL-017", "EVAL-018", "EVAL-019"])
+
+    def test_documented(self) -> None:
+        doc = (Path(__file__).resolve().parent.parent / "docs" / "evaluation-set.md").read_text(encoding="utf-8")
+        for line in ("| Category correct | 9 / 30 | 14 / 30 |", "| Priority correct | 17 / 30 | 21 / 30 |",
+                     "| Unsafe automation: label requires a person, rules allowed an automated response | 8 / 21 | 4 / 21 |"):
+            self.assertIn(line, doc)
+
+
 class EvalSetDocumentation(unittest.TestCase):
     def test_docs_table_matches_the_data_file(self) -> None:
         """docs/evaluation-set.md shows every ticket as it is in the data file, and what the rules decide for it."""
@@ -82,7 +120,9 @@ class EvalSetDocumentation(unittest.TestCase):
         rows = {line.split("|")[1].strip(): line for line in doc.splitlines() if line.startswith("| EVAL-")}
         items = e.load_eval_set()
         self.assertEqual(sorted(rows), [item.ticket.ticket_id for item in items])
-        for item, baseline in zip(items, e.run_rules_baseline(items)):
+        with without_injection_detection():
+            baselines = e.run_rules_baseline(items)
+        for item, baseline in zip(items, baselines):
             with self.subTest(ticket=item.ticket.ticket_id):
                 cells = [cell.strip() for cell in rows[item.ticket.ticket_id].split("|")]
                 rules = f"{baseline.analysis.category}, {baseline.analysis.priority}"
@@ -150,11 +190,13 @@ class Validation(unittest.TestCase):
 
 
 class RulesBaseline(unittest.TestCase):
-    """Pins the rules-only baseline so later comparisons with the LLM start from known numbers."""
+    """Pins the rules-only baseline, as it was before injection detection (AGENT-V2-05), so the published
+    run and every later comparison start from known numbers. `RulesWithInjectionDetection` pins the rules today."""
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.rows = e.run_rules_baseline(e.load_eval_set())
+        with without_injection_detection():
+            cls.rows = e.run_rules_baseline(e.load_eval_set())
 
     def test_summary(self) -> None:
         self.assertEqual(
