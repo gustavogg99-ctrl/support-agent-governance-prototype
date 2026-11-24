@@ -33,7 +33,7 @@ class OracleClient:
     """Answers every ticket with its own label: a perfect classifier."""
 
     def complete(self, *, model, system, user, schema):
-        item = next(i for i in ITEMS if i.ticket.subject in user and i.ticket.description in user)
+        item = next(i for i in ITEMS if c.masked_ticket_block(i.ticket) in user)
         x = item.expected
         return c.LLMResponse(text=classification_json(x.category, x.priority, x.sensitive_data),
                              input_tokens=1000, output_tokens=100, stop_reason="end_turn")
@@ -193,6 +193,7 @@ class CommandLine(unittest.TestCase):
 
 
 REPO = Path(__file__).resolve().parent.parent
+RUN_PROMPTS = REPO / "results" / "run-2026-11-10-prompts"
 SAVED = json.loads((REPO / "results" / "eval_results.json").read_text(encoding="utf-8"))
 
 
@@ -209,10 +210,14 @@ class PublishedResults(unittest.TestCase):
             self.assertIn(table, (REPO / name).read_text(encoding="utf-8"), name)
 
     def test_saved_results_match_the_repository(self) -> None:
-        """The run used the prompts and the evaluation set that are in the repository now."""
+        """The run used the evaluation set in the repository now and the prompts kept in `results/`.
+
+        The prompts in `prompts/` changed after the run (the masking note, Part A), so the run is tied to the
+        frozen copies. The new run in Part D replaces this snapshot.
+        """
         meta = SAVED["meta"]
         for version, digest in meta["prompt_sha256"].items():
-            self.assertEqual(ev._sha256(c.PROMPTS_DIR / f"classify_{version}.md"), digest, version)
+            self.assertEqual(ev._sha256(RUN_PROMPTS / f"classify_{version}.md"), digest, version)
         self.assertEqual(ev._sha256(e.EVAL_SET_FILE), meta["eval_set_sha256"])
         self.assertEqual(meta["tickets"], len(ITEMS))
 
