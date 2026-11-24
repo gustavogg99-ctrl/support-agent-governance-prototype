@@ -77,7 +77,7 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 The completion criteria of the project are met (CI green, results published in the README, full flow from ticket to log, nothing claimed that the code does not prove). What is left is publicising it, the leftovers of `AGENT-V2-08`, and a decision by Gustavo.
 
 1. **`LINKEDIN-01`, post in PT and EN (deadline 24/11/2026).** Drafted in chat, published by Gustavo; no change to this repository. Only numbers from `results/eval_results.json` and the README: 30 synthetic tickets, one run, prompt v2, prices of 10/11/2026. Never "in production"; never a cost without its date and "prompt v2". Limitations stated in the post: synthetic set, one run, prompt v2 written from the same policy that produced the labels. Link: the case page at `https://gustavorodrigues.vercel.app/pt/projects/support-agent-governance-prototype`.
-2. **`AGENT-V2-08` leftovers:** replace `assets/architecture-diagram.*` (it still shows the rules-only prototype) with the LLM + guardrail + human approval flow; a terminal GIF; a demo of about 3 minutes. Offline only: the GIF and the demo replay saved or scripted results, so they cost nothing and need no key.
+2. **`AGENT-V2-08` leftovers:** a terminal GIF; a demo of about 3 minutes. (The architecture diagram was replaced on 2026-11-24 with the LLM + guardrail + human approval flow, now embedded in the README.) Offline only: the GIF and the demo replay saved or scripted results, so they cost nothing and need no key.
 3. **Reconcile `AGENT-V2-08` and `AGENT-V2-09` in Notion** after the post is published.
 
 ## Waiting on Gustavo

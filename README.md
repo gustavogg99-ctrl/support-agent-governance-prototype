@@ -8,23 +8,9 @@ It runs on Python 3.10 or higher. The rules, the tests and the results table use
 
 ## How it works
 
-```mermaid
-flowchart TD
-    T["Ticket"] --> R["Rules: src/prototype.py"]
-    T --> L["LLM classifier: src/llm_classifier.py"]
-    R --> G{"Guardrail: combine()"}
-    L --> G
-    G -- "a person must review" --> H["Fixed handoff message, no draft"]
-    G -- "rules and LLM agree on a low-risk case" --> D["LLM drafts a reply"]
-    D --> C{"check_draft()"}
-    C -- "fails" --> H
-    C -- "passes" --> A{"A person types yes?"}
-    A -- "yes" --> S["Simulated send"]
-    A -- "anything else" --> X["Rejected"]
-    H --> LOG["agent_audit_log.jsonl, redacted"]
-    S --> LOG
-    X --> LOG
-```
+![Flow of one ticket: rules and LLM classify, the guardrail combines them, a person approves every reply, everything is logged](assets/architecture-diagram.png)
+
+The diagram is generated from `assets/architecture-diagram.mmd` (Mermaid source).
 
 The guardrail (`combine()` in `src/agent.py`) sends a ticket to a person when any of these holds:
 

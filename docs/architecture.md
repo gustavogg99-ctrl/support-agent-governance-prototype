@@ -72,4 +72,4 @@ The rules pipeline inside `prototype.py` is described step by step in `docs/deci
 
 ## The diagram in `assets/`
 
-`assets/architecture-diagram.png` (source: `assets/architecture-diagram.drawio`) is the conceptual diagram drawn before the LLM layer existed. It shows the rules pipeline only. Two of its boxes, "Data Pre-Processing" and "Request more information", were never implemented.
+`assets/architecture-diagram.png` shows the flow of one ticket through the agent as implemented: rules and LLM classifier, the guardrail `combine()`, the reply draft and its checks, human approval, simulated send and the audit log. It is generated from `assets/architecture-diagram.mmd` with the Mermaid CLI (`mmdc -i assets/architecture-diagram.mmd -o assets/architecture-diagram.png -w 1000 -s 2 -b white`). It replaces the earlier conceptual diagram, drawn before the LLM layer existed, which showed the rules pipeline only and two boxes that were never implemented ("Data Pre-Processing" and "Request more information").
