@@ -21,14 +21,14 @@ OUT = ROOT / "assets" / "demo.gif"
 
 # (comment shown above the command, command run with the shell)
 STEPS = [
-    ("1. The test suite: 102 tests, none of them calls the API",
+    ("1. The test suite: none of the tests calls the API",
      "python -m unittest discover -s tests 2>&1 | tail -3"),
     ("2. The rules on a ticket that discloses a password: escalated, automation blocked",
      "python src/prototype.py --ticket TCK-009 | sed -n '4,16p'"),
-    ("3. The rules alone on the 30 labelled tickets: 8 of 21 risky tickets would be automated",
+    ("3. The rules alone on the 30 labelled tickets: 4 of 21 risky tickets would be automated",
      "python src/eval_set.py | tail -4"),
-    ("4. Rules + LLM + guardrail, from the saved run (no API call): 0 of 21 with prompt v2",
-     "python src/evaluate.py --table results/eval_results.json | cut -d'|' -f2,3,7,8,10"),
+    ("4. Rules + LLM + guardrail, from the saved run (no API call): 0 of 21 with either prompt",
+     "python src/evaluate.py --table results/eval_results.json | sed -n '1,7p' | cut -d'|' -f2,3,7,8,10"),
 ]
 
 COLS, ROWS = 114, 16
@@ -116,7 +116,7 @@ def main():
         terminal.type_line(command, FG, "$ ")
         terminal.snap(500, cursor=True)
         for line in output:
-            colour = HIGHLIGHT if "prompt v2" in line or "8/21" in line or "Automation Allowed" in line else FG
+            colour = HIGHLIGHT if "prompt v2" in line or "4/21" in line or "Automation Allowed" in line else FG
             terminal.push(line, colour)
             terminal.snap(40)
         terminal.snap(4200 if index == len(STEPS) - 1 else 3200)
