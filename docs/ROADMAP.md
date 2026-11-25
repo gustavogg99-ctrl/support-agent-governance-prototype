@@ -4,7 +4,7 @@ What's done, what's next, and what is waiting on Gustavo. **Read this first when
 
 Update this file in the same PR whenever an item changes status.
 
-_Last updated: 2026-11-24 (Parts A, B, C and D1 merged; Part D2 in review; Gustavo chose to do `AGENT-V2-05` and `AGENT-V2-06` before 01/12/2026, and to record the demo last. When everything is done, Claude asks him whether to mark the project as finished or paused). Parts finished in the current chat: 2 of 3 once Part D2 is merged._
+_Last updated: 2026-11-24 (Parts A to E merged; Part E was in the Portfolio repository. Gustavo chose to do `AGENT-V2-05` and `AGENT-V2-06` before 01/12/2026, and to record the demo last. When everything is done, Claude asks him whether to mark the project as finished or paused). Parts finished in the current chat: 0 of 3 (handoff done after Part E; new chat starts here)._
 
 ## Goal
 
@@ -82,19 +82,21 @@ Evolve the rules-only prototype into an IT ticket triage agent where:
 | Part C | `AGENT-V2-05`: `detect_prompt_injection()` in `src/prototype.py`, 7 techniques (`INJECTION_PATTERNS`), run first in `classify_ticket()` so a match is a Security Incident (High, escalated, blocked); new field `prompt_injection_signals`. `docs/injection-detection.md` (threat model, decisions, known gaps). Written from the technique list and tested on synthetic strings in neither data file, then run once: 5/5 original injection tickets (in-sample) and 10/10 held-out (out-of-sample, same author: weak evidence), 0 of the 35 other tickets flagged. Rules-only baseline 9/30 → 14/30 categories, 17/30 → 21/30 priorities, 8/21 → 4/21 unsafe; the "before" numbers are reproduced in tests by switching detection off and still match the published run. Known evasions pinned by `KnownGaps`. Published LLM results unchanged until Part D | AGENT-V2-05 | #26 |
 | Part D1 | `src/evaluate.py` runs the 10 held-out injection tickets through the same four combinations and reports them **separately** (`holdout` section of the results file, second table `format_holdout_table`); the 30-ticket numbers, table and file hash are unchanged; the failed-run check and the cost cover both sets; the run is now 160 calls. `HOLDOUT_FILE` in `src/eval_set.py`. Tests with simulated clients (`HeldOut`). No new real run yet, so no new published number | AGENT-V2-05 | #28 |
 | Part D2 | New real run on Gustavo's machine (24/11/2026, 160 calls, US$ 0.2511, no invalid output, no API error), committed in `results/eval_results.json`; the run of 10/11 is archived with its prompts in `results/run-2026-11-10/`. README, `docs/evaluation-run.md`, `docs/llm-classifier.md`, `docs/injection-detection.md` and the demo GIF now publish the new numbers: 30 tickets, guardrail 0/21 unsafe on all four combinations (rules alone 4/21; LLM alone 3/21 with v1, 1/21 with v2); held-out: v1 1/10 categories and 5/10 unsafe without the rules, v2 10/10 and 0/10 on both models, guardrail 0/10 everywhere. Limits stated: same author for tickets, policy and patterns; two runs differ in 12 of 120 answers and masking is not isolated from chance. `tests/test_evaluate.py` pins every number and prose claim to the file, and the comparison with the archive | AGENT-V2-05, AGENT-V2-06 | #29 |
+| Part E | Portfolio site (separate repository, its Part 38, ADR-048): the Support Agent card, case page, quick read, preview (EVAL-011 of the new run) and "Now" line republished with the numbers of this repository's README and `results/eval_results.json` of 24/11/2026, with the limits stated: masking exists with blind spots, detection is pattern-based, the held-out set is weak evidence, two runs differ in 12 of 120 answers, 149 tests. Not part of this repository: the resume PDFs there still say "102 tests in CI" (Gustavo's export) | `PORTFOLIO` (the earlier `IFOOD-03` was done on 10/11) | Portfolio #53 |
 
 ## Next (in order)
 
 Decided by Gustavo on 24/11/2026: do `AGENT-V2-06` and `AGENT-V2-05` before he starts at Aoop on 01/12/2026 (the API key expires on 10/12/2026). He moves house on 27/11. Plan below is Claude's proposal; Gustavo approves each part in its PR. Every published number is tied to `results/eval_results.json` (run of 24/11/2026) by tests.
 
-1. **Part E — the portfolio case and its "Now" line (`IFOOD-03`), in the Portfolio repository.** Written from the published README and `docs/evaluation-run.md`, with the same limits stated. It is a separate repository, so it is its own branch and pull request there.
-2. **`AGENT-V2-08`, the demo, always last (Gustavo's decision of 24/11/2026; no date):** the demo of about 3 minutes, recorded by Gustavo with OBS from the script in the Notion task. Offline only: it replays saved results, so it costs nothing and needs no key.
+1. **`AGENT-V2-08`, the demo, always last (Gustavo's decision of 24/11/2026; no date):** the demo of about 3 minutes, recorded by Gustavo with OBS from the script in the Notion task. Offline only: it replays saved results, so it costs nothing and needs no key.
 
 ## Waiting on Gustavo
 
 - Letting the API key expire on 10/12/2026 or revoking it in the Console: no more real runs are planned.
 - The demo recording (last item, no date).
 - After everything is done: deciding whether the project is marked as finished or paused (Claude asks him).
+- Removing `ANTHROPIC_API_KEY` from his terminal (`Remove-Item Env:ANTHROPIC_API_KEY`).
+- Re-exporting the resume PDFs of the Portfolio site from his source file (they say "102 tests in CI"; the repository has 149). Then the PDFs there are replaced in a small part of that repository.
 - `IFOOD-06` is his decision and is not part of this repository.
 
 ## Background for Parts A and C
