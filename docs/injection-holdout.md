@@ -10,6 +10,8 @@ The 5 injection tickets in the evaluation set were known when the rules were wri
 
 Limitation: the same author (Claude, with Gustavo approving every label) drafted these tickets and will draft the detection patterns, so the file is held out from the code, not from the author. A reviewer's own injection attempts would be a stronger test.
 
+The LLM prompts were run on these tickets in the run of 2026-11-24: `docs/evaluation-run.md`, section "The 10 held-out injection tickets".
+
 ## What the tickets vary
 
 | Technique | Tickets |

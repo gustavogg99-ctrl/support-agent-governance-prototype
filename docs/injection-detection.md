@@ -42,7 +42,7 @@ English and Portuguese are covered, as in the evaluation set. Before matching, t
 | 10 held-out tickets (out-of-sample) | 10 / 10 (before detection: 4 / 10 reached a person, by accident) |
 | 35 other tickets (10 samples, 25 evaluation tickets) | 0 flagged, categories unchanged |
 
-The held-out result is limited. The same author wrote the techniques, the tickets and the patterns, and had the ticket texts in view when writing them. See `docs/injection-holdout.md`. The published LLM results (`results/eval_results.json`) were produced before this detection existed and are not changed by it until the new run of Part D.
+The held-out result is limited. The same author wrote the techniques, the tickets and the patterns, and had the ticket texts in view when writing them. See `docs/injection-holdout.md`. The published LLM results (`results/eval_results.json`, run of 2026-11-24) were produced with this detection in the rules; what the LLM does with the held-out tickets is in `docs/evaluation-run.md`.
 
 ## Known gaps
 

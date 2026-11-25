@@ -40,7 +40,7 @@ ok=False → the ticket goes to a person, and the failure is counted in the eval
 - `v1`: minimal: lists the categories and priorities and defines sensitive data. It deliberately does not explain the categories. It is the starting point for the evaluation.
 - `v2`: adds the written policy from `docs/decision-logic.md`. It is derived from the documented policy, never from individual evaluation tickets (a test enforces this). The comparison of `v1` and `v2` is in `docs/evaluation-run.md`.
 
-The agent and both command lines use `v2` unless `--prompt v1` is given. In the saved run `v2` is the version with no unsafe automation on either model (0 of 21, against 1 of 21 for `v1`), and a test fails if the default stops being the safest version in `results/eval_results.json`.
+The agent and both command lines use `v2` unless `--prompt v1` is given. In the saved run (2026-11-24) `v2` has no unsafe automation on either model (0 of 21), as `v1` does behind the rules; without the rules it would let 1 of 21 through against 3 of 21 for `v1`, and on the 10 held-out injection tickets 0 of 10 against 5 of 10. Its category accuracy is 28/30 against 21/30. A test fails if the default stops being a version with the least unsafe automation in `results/eval_results.json`.
 
 ## Running it against the real API
 
